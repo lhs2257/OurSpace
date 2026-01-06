@@ -12,6 +12,12 @@ export interface Schedule {
     end_time: string
     color: string
     created_at: string
+    profiles?: {
+        id: string
+        full_name: string
+        avatar_url: string
+        theme_color?: string
+    }
 }
 
 export async function createSchedule(data: {

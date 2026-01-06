@@ -14,20 +14,21 @@ interface ScheduleModalProps {
     onClose: () => void
     selectedDate: Date | null
     userId: string
+    userThemeColor?: string
     schedule?: Schedule | null
     onSuccess: () => void
 }
 
 const colorOptions = [
-    { value: '#3b82f6', label: '파랑' },
-    { value: '#10b981', label: '초록' },
-    { value: '#f59e0b', label: '주황' },
-    { value: '#ef4444', label: '빨강' },
-    { value: '#8b5cf6', label: '보라' },
-    { value: '#ec4899', label: '핑크' },
+    { value: '#3b82f6', label: '파랑', themeId: 'blue' },
+    { value: '#10b981', label: '초록', themeId: 'green' },
+    { value: '#f59e0b', label: '주황', themeId: 'orange' },
+    { value: '#ef4444', label: '빨강', themeId: 'red' },
+    { value: '#8b5cf6', label: '보라', themeId: 'purple' },
+    { value: '#ec4899', label: '핑크', themeId: 'rose' },
 ]
 
-export default function ScheduleModal({ isOpen, onClose, selectedDate, userId, schedule, onSuccess }: ScheduleModalProps) {
+export default function ScheduleModal({ isOpen, onClose, selectedDate, userId, userThemeColor, schedule, onSuccess }: ScheduleModalProps) {
     const [title, setTitle] = useState('')
     const [description, setDescription] = useState('')
     const [startTime, setStartTime] = useState('')
@@ -49,10 +50,21 @@ export default function ScheduleModal({ isOpen, onClose, selectedDate, userId, s
             setDescription('')
             setStartTime(`${dateStr}T09:00`)
             setEndTime(`${dateStr}T10:00`)
-            setColor('#3b82f6')
+
+            // 사용자 테마 색상에 맞는 색상 선택
+            if (userThemeColor) {
+                const matchedColor = colorOptions.find(c => c.themeId === userThemeColor || c.themeId === 'indigo') // indigo 매핑
+                if (matchedColor) {
+                    setColor(matchedColor.value)
+                } else {
+                    setColor('#3b82f6')
+                }
+            } else {
+                setColor('#3b82f6')
+            }
         }
         setError(null) // Reset error when modal opens
-    }, [schedule, selectedDate])
+    }, [schedule, selectedDate, userThemeColor])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
