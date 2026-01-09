@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Calendar, MessageSquare, Clock, BarChart3, LogOut } from 'lucide-react'
+import { Home, Calendar, MessageSquare, Clock, BarChart3, Gamepad2, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase-client'
 
@@ -12,6 +12,7 @@ const navigation = [
     { name: '채팅', href: '/chat', icon: MessageSquare },
     { name: '근태 관리', href: '/attendance', icon: Clock },
     { name: '근태 통계', href: '/attendance/stats', icon: BarChart3 },
+    { name: '미니게임', href: '/minigames', icon: Gamepad2 },
 ]
 
 interface SidebarProps {
