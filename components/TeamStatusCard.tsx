@@ -31,6 +31,45 @@ interface TeamMember {
     firstCheckIn?: string
     lastCheckOut?: string
     themeColor?: string
+    lateCount: number
+    isLateToday: boolean
+}
+
+// 4개 원 표시 컴포넌트
+function LateIndicator({ lateCount }: { lateCount: number }) {
+    return (
+        <div className="flex gap-1 ml-2 items-center">
+            {[0, 1, 2, 3].map((index) => (
+                <div
+                    key={index}
+                    className={`w-3 h-3 rounded-full border border-gray-200 ${index < lateCount ? 'bg-red-500' : 'bg-green-500'
+                        }`}
+                    title={`${lateCount}/4 지각`}
+                />
+            ))}
+        </div>
+    );
+}
+
+// 현재 분기 계산 (클라이언트)
+function getCurrentQuarter(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const quarter = Math.ceil(month / 3);
+    return `${year}-Q${quarter}`;
+}
+
+// 지각 판정 (10:10 기준)
+function isLate(checkInTime: string): boolean {
+    const time = new Date(checkInTime);
+    const hours = time.getHours();
+    const minutes = time.getMinutes();
+
+    if (hours > 10) return true; // 11시 이후
+    if (hours === 10 && minutes > 10) return true; // 10:11 이후
+
+    return false;
 }
 
 export default function TeamStatusCard({ currentUserId }: { currentUserId: string }) {
@@ -58,7 +97,22 @@ export default function TeamStatusCard({ currentUserId }: { currentUserId: strin
     }, [])
 
     async function loadTeamStatus() {
+        // Attendance Data Fetching
         const result = await getAllTodayAttendance()
+
+        // Late Records Fetching
+        const supabase = createClient()
+        const currentQuarter = getCurrentQuarter()
+
+        // 모든 팀원의 지각 기록을 한 번에 가져오기 어렵다면, 개별적으로 가져오거나 
+        // 여기서는 간단하게 각 멤버별로 조회하는 방식을 사용 (최적화 여지 있음)
+        // 하지만 getAllTodayAttendance가 모든 출석을 가져오므로, 
+        // late_records도 비슷하게 가져올 수 있으면 좋음.
+        // 여기서는 클라이언트에서 Supabase 직접 호출
+        const { data: lateRecords } = await supabase
+            .from('late_records')
+            .select('user_id')
+            .eq('quarter', currentQuarter)
 
         if (result.success && result.data) {
             const records = result.data as AttendanceRecord[]
@@ -84,9 +138,15 @@ export default function TeamStatusCard({ currentUserId }: { currentUserId: strin
                 )
 
                 const lastRecord = userRecords[userRecords.length - 1]
-                const firstCheckIn = userRecords.find(r => r.type === 'check_in')
+                const firstCheckIn = userRecords.find(r => r.type === 'check_in') // 첫 출근 기록
                 const lastCheckOut = userRecords.reverse().find(r => r.type === 'check_out') // 가장 최근 퇴근 기록
                 const profile = lastRecord.profiles
+
+                // 지각 카운트 계산
+                const userLateCount = lateRecords?.filter(r => r.user_id === userId).length || 0
+
+                // 오늘 지각 여부
+                const isLateToday = firstCheckIn ? isLate(firstCheckIn.created_at) : false
 
                 members.push({
                     userId,
@@ -95,7 +155,9 @@ export default function TeamStatusCard({ currentUserId }: { currentUserId: strin
                     isWorking: lastRecord.type === 'check_in',
                     firstCheckIn: firstCheckIn?.created_at,
                     lastCheckOut: lastCheckOut?.created_at,
-                    themeColor: profile?.theme_color || 'blue'
+                    themeColor: profile?.theme_color || 'blue',
+                    lateCount: userLateCount,
+                    isLateToday: isLateToday
                 })
             })
 
@@ -138,10 +200,20 @@ export default function TeamStatusCard({ currentUserId }: { currentUserId: strin
                                         {member.name[0]}
                                     </div>
                                     <div>
-                                        <p className="font-medium text-gray-900">{member.name}</p>
+                                        <div className="flex items-center gap-1">
+                                            <p className="font-medium text-gray-900">{member.name}</p>
+                                            <LateIndicator lateCount={member.lateCount} />
+                                        </div>
                                         <div className="text-sm text-gray-500 flex flex-col">
                                             {member.firstCheckIn ? (
-                                                <span>출근: {format(new Date(member.firstCheckIn), 'a h:mm', { locale: ko })}</span>
+                                                <div className="flex items-center gap-1">
+                                                    <span>출근: {format(new Date(member.firstCheckIn), 'a h:mm', { locale: ko })}</span>
+                                                    {member.isLateToday && (
+                                                        <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] rounded-full font-bold">
+                                                            지각
+                                                        </span>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <span>미출근</span>
                                             )}
