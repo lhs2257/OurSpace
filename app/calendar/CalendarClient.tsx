@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar } from '@/components/ui/calendar'
+import { Calendar, CalendarDayButton } from '@/components/ui/calendar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Plus, Clock, Calendar as CalendarIcon } from 'lucide-react'
@@ -10,6 +10,8 @@ import { ko } from 'date-fns/locale'
 import ScheduleModal from '@/components/ScheduleModal'
 import { getAllSchedules, Schedule } from '@/lib/schedule-actions'
 import { createClient } from '@/lib/supabase-client'
+import type { DayButton } from 'react-day-picker'
+import React from 'react'
 
 interface CalendarClientProps {
     currentUser: {
@@ -76,6 +78,49 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
         setIsModalOpen(true)
     }
 
+    // Custom DayButton component to show schedule indicators
+    const CustomDayButton = (props: React.ComponentProps<typeof DayButton>) => {
+        const daySchedules = schedules.filter(schedule =>
+            isSameDay(new Date(schedule.start_time), props.day.date)
+        )
+
+        return (
+            <CalendarDayButton {...props}>
+                <span className="font-bold" style={{ fontSize: '20px', lineHeight: '1' }}>{props.day.date.getDate()}</span>
+                {daySchedules.length > 0 && (
+                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
+                        {daySchedules.slice(0, 3).map((schedule, idx) => (
+                            <div
+                                key={schedule.id || idx}
+                                className="w-1.5 h-1.5 rounded-full"
+                                style={{ backgroundColor: schedule.color }}
+                            />
+                        ))}
+                    </div>
+                )}
+            </CalendarDayButton>
+        )
+    }
+
+    // Custom Weekday component with custom font size
+    const CustomWeekday = ({ children, ...props }: any) => {
+        // 요일 텍스트 확인 (일, 월, 화, 수, 목, 금, 토)
+        const dayText = children?.toString() || ''
+
+        let color = '#6b7280' // 기본 gray-500
+        if (dayText.includes('일')) {
+            color = '#dc2626' // 일요일 - 빨간색
+        } else if (dayText.includes('토')) {
+            color = '#2563eb' // 토요일 - 파란색
+        }
+
+        return (
+            <th {...props} className="rounded-md w-full font-bold flex justify-center items-center flex-1 pb-4">
+                <span style={{ fontSize: '20px', lineHeight: '1', color }}>{children}</span>
+            </th>
+        )
+    }
+
     return (
         <div className="space-y-8">
             {/* Header */}
@@ -120,7 +165,7 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                                 nav_button_next: "static block",
                                 table: "w-full border-collapse space-y-1 block",
                                 head_row: "flex w-full mb-4 [&>*:first-child]:!text-red-600 [&>*:last-child]:!text-blue-600",
-                                head_cell: "text-gray-500 rounded-md w-full font-bold text-4xl flex justify-center items-center flex-1 pb-4",
+                                head_cell: "text-gray-500 rounded-md w-full font-bold text-xl flex justify-center items-center flex-1 pb-4",
                                 row: "flex w-full mt-2",
                                 cell: "text-center text-4xl p-0 relative focus-within:relative focus-within:z-20 h-24 md:h-32 w-full flex-1",
                                 day: "h-[calc(100%-0.5rem)] w-[calc(100%-0.5rem)] m-1 p-0 font-normal aria-selected:opacity-100 hover:bg-gray-100 rounded-md transition-colors flex flex-col items-center justify-start pt-4 relative",
@@ -130,36 +175,18 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                             modifiers={{
                                 today: new Date(),
                                 sunday: { dayOfWeek: [0] },
-                                saturday: { dayOfWeek: [6] }
+                                saturday: { dayOfWeek: [6] },
+                                hasSchedule: schedules.map(s => new Date(s.start_time))
                             }}
                             modifiersClassNames={{
                                 today: 'bg-gray-200 text-gray-900',
                                 sunday: 'text-red-600',
-                                saturday: 'text-blue-600'
+                                saturday: 'text-blue-600',
+                                hasSchedule: 'font-bold'
                             }}
                             components={{
-                                Day: ({ day, ...props }) => {
-                                    const daySchedules = schedules.filter(schedule =>
-                                        isSameDay(new Date(schedule.start_time), day.date)
-                                    )
-
-                                    return (
-                                        <div className="relative w-full h-full">
-                                            {props.children}
-                                            {daySchedules.length > 0 && (
-                                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-0.5">
-                                                    {daySchedules.slice(0, 3).map((schedule, idx) => (
-                                                        <div
-                                                            key={schedule.id || idx}
-                                                            className="w-1.5 h-1.5 rounded-full"
-                                                            style={{ backgroundColor: schedule.color }}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )
-                                }
+                                DayButton: CustomDayButton,
+                                Weekday: CustomWeekday
                             }}
                         />
                     </CardContent>
