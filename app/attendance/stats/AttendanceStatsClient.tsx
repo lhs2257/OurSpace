@@ -120,7 +120,11 @@ export default function AttendanceStatsClient() {
                 </Card>
             </div>
 
-            <AttendanceCalendar records={records} currentMonth={currentMonth} />
+            <AttendanceCalendar
+                records={records}
+                currentMonth={currentMonth}
+                onMonthChange={setCurrentMonth}
+            />
         </div>
     );
 }
