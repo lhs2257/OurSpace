@@ -146,7 +146,7 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                         <CardTitle>월간 캘린더</CardTitle>
                         <CardDescription>날짜를 선택하여 상세 일정을 확인하세요</CardDescription>
                     </CardHeader>
-                    <CardContent className="p-4 overflow-hidden max-w-full">
+                    <CardContent className="p-4 overflow-auto max-w-full">
                         <Calendar
                             mode="single"
                             selected={date}
