@@ -146,7 +146,7 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                         <CardTitle>월간 캘린더</CardTitle>
                         <CardDescription>날짜를 선택하여 상세 일정을 확인하세요</CardDescription>
                     </CardHeader>
-                    <CardContent className="p-4">
+                    <CardContent className="p-4 overflow-hidden max-w-full">
                         <Calendar
                             mode="single"
                             selected={date}
@@ -154,7 +154,7 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                             locale={ko}
                             className="rounded-md border shadow-sm w-full block"
                             classNames={{
-                                root: "w-full p-3 block relative",
+                                root: "w-full max-w-full p-3 block relative",
                                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 w-full relative",
                                 month: "space-y-4 w-full relative flex flex-col",
                                 caption: "flex justify-center pt-1 relative items-center mb-4 z-10",
