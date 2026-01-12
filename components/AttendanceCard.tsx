@@ -118,7 +118,7 @@ export default function AttendanceCard({ userId }: { userId: string }) {
                     <div className="rounded-md bg-yellow-50 p-3 border border-yellow-200">
                         <p className="text-sm text-yellow-800">
                             모바일에서는 현황 조회만 가능합니다.<br />
-                            출근 체크는 PC에서 진행해주세요.
+                            출근/퇴근 체크는 PC에서 진행해주세요.
                         </p>
                     </div>
                 )}
@@ -179,7 +179,7 @@ export default function AttendanceCard({ userId }: { userId: string }) {
                         variant="outline"
                         size="sm"
                         onClick={handleCheckOut}
-                        disabled={loading || !isWorking}
+                        disabled={loading || !isWorking || isMobile}
                     >
                         <LogOutIcon className="mr-2 h-4 w-4" />
                         퇴근
