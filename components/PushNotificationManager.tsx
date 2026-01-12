@@ -13,24 +13,38 @@ export default function PushNotificationManager({ userId }: { userId: string }) 
 
     useEffect(() => {
         if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-            // run only in browser
-            navigator.serviceWorker.ready.then(reg => {
-                setRegistration(reg)
-                reg.pushManager.getSubscription().then(sub => {
+            // 1. Register Service Worker explicitly to ensure it exists
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => {
+                    setRegistration(reg)
+                    // 2. Check existing subscription
+                    return reg.pushManager.getSubscription()
+                })
+                .then(sub => {
                     if (sub && !(sub.expirationTime && Date.now() > sub.expirationTime)) {
                         setSubscription(sub)
                         setIsSubscribed(true)
                     }
                 })
-            })
+                .catch(err => console.error('Service Worker registration failed:', err))
         }
     }, [])
 
     async function subscribeToPush() {
-        if (!registration) return
+        // Fallback: Try to get registration if missing
+        let reg = registration
+        if (!reg && 'serviceWorker' in navigator) {
+            reg = await navigator.serviceWorker.ready
+            setRegistration(reg)
+        }
+
+        if (!reg) {
+            console.error('No Service Worker registration found')
+            return
+        }
 
         try {
-            const sub = await registration.pushManager.subscribe({
+            const sub = await reg.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array(
                     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
@@ -76,9 +90,8 @@ export default function PushNotificationManager({ userId }: { userId: string }) 
         console.log('Web Push Unsubscribed!')
     }
 
-    if (!registration) {
-        return null // Service worker not ready or not supported
-    }
+    // Always render the button, disabled only if SW is strictly not supported
+    // (Optional: loading state)
 
     return (
         <div className="flex items-center space-x-2">
