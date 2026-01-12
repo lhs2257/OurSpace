@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import Sidebar from '@/components/Sidebar'
+import BottomNav from '@/components/BottomNav'
 import { getCurrentUser } from '@/lib/get-user'
 
 export const metadata: Metadata = {
@@ -28,16 +29,24 @@ export default async function RootLayout({
             <body className="bg-gray-50">
                 {showSidebar ? (
                     <div className="flex h-screen overflow-hidden">
-                        <Sidebar user={{
-                            fullName: user.fullName,
-                            email: user.email || '',
-                            themeColor: user.themeColor
-                        }} />
+                        {/* Desktop Sidebar (hidden on mobile) */}
+                        <div className="hidden md:flex">
+                            <Sidebar user={{
+                                fullName: user.fullName,
+                                email: user.email || '',
+                                themeColor: user.themeColor
+                            }} />
+                        </div>
+
                         <main className="flex-1 overflow-y-auto">
-                            <div className="container mx-auto p-8">
+                            {/* Mobile Padding for Bottom Nav (pb-20), Desktop Padding (md:p-8) */}
+                            <div className="container mx-auto p-4 pb-24 md:p-8">
                                 {children}
                             </div>
                         </main>
+
+                        {/* Mobile Bottom Nav */}
+                        <BottomNav />
                     </div>
                 ) : (
                     children
