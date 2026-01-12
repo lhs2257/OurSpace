@@ -49,8 +49,8 @@ export async function GET(request: Request) {
         }
 
         const payload = JSON.stringify({
-            title: '출근 전 알림 ⏰',
-            body: '곧 업무 시작 시간입니다! (10:00 AM)',
+            title: '출근 30분 전 알림 ⏰',
+            body: '30분 남았다.. 빨랑 출근해라.. 아오..',
             url: '/dashboard',
             icon: '/icon-192x192.png'
         })
