@@ -1,0 +1,107 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Bell, BellOff } from 'lucide-react'
+import { createClient } from '@/lib/supabase-client'
+import { urlBase64ToUint8Array } from '@/lib/utils'
+
+export default function PushNotificationManager({ userId }: { userId: string }) {
+    const [isSubscribed, setIsSubscribed] = useState(false)
+    const [subscription, setSubscription] = useState<PushSubscription | null>(null)
+    const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null)
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && 'serviceWorker' in navigator && (window as any).workbox !== undefined) {
+            // run only in browser
+            navigator.serviceWorker.ready.then(reg => {
+                setRegistration(reg)
+                reg.pushManager.getSubscription().then(sub => {
+                    if (sub && !(sub.expirationTime && Date.now() > sub.expirationTime)) {
+                        setSubscription(sub)
+                        setIsSubscribed(true)
+                    }
+                })
+            })
+        }
+    }, [])
+
+    async function subscribeToPush() {
+        if (!registration) return
+
+        try {
+            const sub = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(
+                    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+                )
+            })
+
+            setSubscription(sub)
+            setIsSubscribed(true)
+
+            // Save subscription to DB
+            const supabase = createClient()
+            const { error } = await supabase
+                .from('push_subscriptions')
+                .insert({
+                    user_id: userId,
+                    endpoint: sub.endpoint,
+                    p256dh: sub.toJSON().keys?.p256dh!,
+                    auth: sub.toJSON().keys?.auth!
+                })
+
+            if (error) console.error('Failed to save subscription:', error)
+
+            console.log('Web Push Subscribed!')
+        } catch (error) {
+            console.error('Failed to subscribe to Push', error)
+        }
+    }
+
+    async function unsubscribeFromPush() {
+        if (!subscription) return
+
+        await subscription.unsubscribe()
+
+        // Remove from DB
+        const supabase = createClient()
+        await supabase
+            .from('push_subscriptions')
+            .delete()
+            .eq('endpoint', subscription.endpoint)
+
+        setSubscription(null)
+        setIsSubscribed(false)
+        console.log('Web Push Unsubscribed!')
+    }
+
+    if (!registration) {
+        return null // Service worker not ready or not supported
+    }
+
+    return (
+        <div className="flex items-center space-x-2">
+            {isSubscribed ? (
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={unsubscribeFromPush}
+                    className="text-gray-500 hover:text-red-500"
+                >
+                    <BellOff className="h-4 w-4 mr-2" />
+                    알림 끄기
+                </Button>
+            ) : (
+                <Button
+                    variant="default"
+                    size="sm"
+                    onClick={subscribeToPush}
+                >
+                    <Bell className="h-4 w-4 mr-2" />
+                    알림 켜기
+                </Button>
+            )}
+        </div>
+    )
+}

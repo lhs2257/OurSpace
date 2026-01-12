@@ -20,6 +20,20 @@ export async function checkIn(userId: string) {
         return { success: false, error: error.message }
     }
 
+    // Push 알림 전송 (비동기)
+    const { data: user } = await supabase.auth.getUser()
+    const userName = user.user?.user_metadata?.full_name || user.user?.email?.split('@')[0] || '팀원'
+
+    // sendPushNotification은 비동기로 실행되지만 여기서 await하지 않아도 됨 (Fire & Forget)
+    // 단, Vercel Serverless 함수 실행 시간에는 영향을 줄 수 있으므로 간단히 처리
+    import('./push-actions').then(({ sendPushNotification }) => {
+        sendPushNotification(
+            '출근 알림',
+            `${userName}님이 출근했습니다. ☀️`,
+            '/'
+        ).catch(e => console.error(e))
+    })
+
     revalidatePath('/dashboard')
     return { success: true, data }
 }
@@ -40,6 +54,18 @@ export async function checkOut(userId: string) {
         console.error('Check-out error:', error)
         return { success: false, error: error.message }
     }
+
+    // Push 알림 전송
+    const { data: user } = await supabase.auth.getUser()
+    const userName = user.user?.user_metadata?.full_name || user.user?.email?.split('@')[0] || '팀원'
+
+    import('./push-actions').then(({ sendPushNotification }) => {
+        sendPushNotification(
+            '퇴근 알림',
+            `${userName}님이 퇴근했습니다. 👋`,
+            '/'
+        ).catch(e => console.error(e))
+    })
 
     revalidatePath('/dashboard')
     return { success: true, data }

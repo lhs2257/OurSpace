@@ -6,6 +6,7 @@ import WorkTimer from '@/components/WorkTimer'
 import { getCurrentUser } from '@/lib/get-user'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
+import PushNotificationManager from '@/components/PushNotificationManager'
 
 export default async function DashboardPage() {
     const user = await getCurrentUser()
@@ -61,7 +62,10 @@ export default async function DashboardPage() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900">대시보드</h1>
-                    <p className="mt-2 text-gray-600">환영합니다, {user.fullName || user.email}님!</p>
+                    <div className="flex items-center gap-4 mt-2">
+                        <p className="text-gray-600">환영합니다, {user.fullName || user.email}님!</p>
+                        <PushNotificationManager userId={user.id} />
+                    </div>
                 </div>
                 <WorkTimer
                     initialCheckInTime={firstCheckIn?.created_at || null}
