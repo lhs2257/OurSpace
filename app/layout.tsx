@@ -6,6 +6,11 @@ import { getCurrentUser } from '@/lib/get-user'
 export const metadata: Metadata = {
     title: 'OurSpace - 사내 관리 도구',
     description: '2인 규모 사내 일정 공유, 실시간 채팅, 근태 관리 시스템',
+    manifest: '/manifest.json',
+}
+
+export const viewport = {
+    themeColor: '#ffffff',
 }
 
 export default async function RootLayout({

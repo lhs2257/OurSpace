@@ -21,6 +21,18 @@ export default function AttendanceCard({ userId }: { userId: string }) {
     const [loading, setLoading] = useState(false)
     const [isWorking, setIsWorking] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [isMobile, setIsMobile] = useState(false)
+
+    useEffect(() => {
+        // 모바일 기기 감지
+        const checkMobile = () => {
+            const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera
+            if (/android/i.test(userAgent) || /iPad|iPhone|iPod/.test(userAgent)) {
+                setIsMobile(true)
+            }
+        }
+        checkMobile()
+    }, [])
 
     useEffect(() => {
         loadAttendance()
@@ -102,6 +114,16 @@ export default function AttendanceCard({ userId }: { userId: string }) {
                 <CardDescription>오늘의 출퇴근 기록</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+                {isMobile && (
+                    <div className="rounded-md bg-yellow-50 p-3 border border-yellow-200">
+                        <p className="text-sm text-yellow-800">
+                            모바일에서는 현황 조회만 가능합니다.<br />
+                            출근 체크는 PC에서 진행해주세요.
+                        </p>
+                    </div>
+                )}
+
+                {/* Error Logic */}
                 {error && (
                     <div className="rounded-md bg-red-50 p-3 border border-red-200">
                         <p className="text-sm text-red-800">{error}</p>
@@ -146,7 +168,7 @@ export default function AttendanceCard({ userId }: { userId: string }) {
                         variant="outline"
                         size="sm"
                         onClick={handleCheckIn}
-                        disabled={loading || isWorking}
+                        disabled={loading || isWorking || isMobile}
                     >
                         <LogIn className="mr-2 h-4 w-4" />
                         출근
