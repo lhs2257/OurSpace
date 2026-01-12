@@ -42,9 +42,14 @@ function getCurrentQuarter(): string {
     return `${year}-Q${quarter}`;
 }
 
-// 지각 판정 (10:10 기준)
+// 지각 판정 (10:10 기준, 주말 제외)
 function isLate(checkInTime: string): boolean {
     const time = new Date(checkInTime);
+    const day = time.getDay(); // 0: 일요일, 6: 토요일
+
+    // 주말이면 지각 아님
+    if (day === 0 || day === 6) return false;
+
     const hours = time.getHours();
     const minutes = time.getMinutes();
 
