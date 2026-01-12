@@ -129,8 +129,8 @@ export default function TeamStatusCard({ currentUserId }: { currentUserId: strin
             // 각 사용자의 상태 계산
             const members: TeamMember[] = []
             userMap.forEach((userRecords, userId) => {
-                // 현재 사용자는 제외
-                if (userId === currentUserId) return
+                // 현재 사용자는 제외 (제거됨 - 본인 포함 표시)
+                // if (userId === currentUserId) return
 
                 // 시간순 정렬
                 userRecords.sort((a, b) =>
