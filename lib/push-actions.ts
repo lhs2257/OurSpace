@@ -49,6 +49,7 @@ export async function sendPushNotification(title: string, body: string, url: str
     })
 
     await Promise.all(notifications)
+    return { success: true, count: subscriptions.length }
 }
 
 export async function sendPushToUser(userId: string, title: string, body: string, url: string = '/') {

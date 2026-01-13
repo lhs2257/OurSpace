@@ -22,14 +22,16 @@ export async function GET(request: Request) {
     }
 
     // 3. Send Push Notification using the shared action
-    // This ensures we use exactly the same logic as the working "Test Notification"
     try {
         const { sendPushNotification } = await import('@/lib/push-actions')
-        await sendPushNotification(
+        const result = await sendPushNotification(
             '출근 30분 전 알림 ⏰',
             '30분 남았다.. 빨랑 출근해라.. 아오..'
         )
-        return NextResponse.json({ message: 'Notifications triggered via shared action' })
+        return NextResponse.json({
+            message: 'Notifications triggered via shared action',
+            result
+        })
     } catch (error) {
         console.error('Cron Push Error:', error)
         return NextResponse.json({ message: 'Error sending notifications', error }, { status: 500 })
