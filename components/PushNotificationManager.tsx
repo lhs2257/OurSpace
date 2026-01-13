@@ -90,21 +90,45 @@ export default function PushNotificationManager({ userId }: { userId: string }) 
         console.log('Web Push Unsubscribed!')
     }
 
+    async function sendTestNotification() {
+        if (!isSubscribed) return
+
+        // Dynamically import action to avoid build issues if server actions aren't fully ready
+        const { sendPushToUser } = await import('@/lib/push-actions')
+        await sendPushToUser(
+            userId,
+            '테스트 알림 🔔',
+            '알림이 정상적으로 도착했습니다!',
+            '/'
+        )
+    }
+
     // Always render the button, disabled only if SW is strictly not supported
     // (Optional: loading state)
 
     return (
         <div className="flex items-center space-x-2">
             {isSubscribed ? (
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={unsubscribeFromPush}
-                    className="text-gray-500 hover:text-red-500"
-                >
-                    <BellOff className="h-4 w-4 mr-2" />
-                    알림 끄기
-                </Button>
+                <>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={sendTestNotification}
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    >
+                        <Bell className="h-4 w-4 mr-2" />
+                        테스트 알림
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={unsubscribeFromPush}
+                        className="text-gray-500 hover:text-red-500"
+                    >
+                        <BellOff className="h-4 w-4 mr-2" />
+                        알림 끄기
+                    </Button>
+                </>
             ) : (
                 <Button
                     variant="default"

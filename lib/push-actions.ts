@@ -50,3 +50,45 @@ export async function sendPushNotification(title: string, body: string, url: str
 
     await Promise.all(notifications)
 }
+
+export async function sendPushToUser(userId: string, title: string, body: string, url: string = '/') {
+    const supabase = await createClient()
+
+    // 1. Get subscriptions for specific user
+    const { data: subscriptions } = await supabase
+        .from('push_subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+
+    if (!subscriptions || subscriptions.length === 0) return { success: false, message: 'No subscriptions found' }
+
+    // 2. Send push to each subscription
+    const notifications = subscriptions.map(sub => {
+        const pushSubscription = {
+            endpoint: sub.endpoint,
+            keys: {
+                p256dh: sub.p256dh,
+                auth: sub.auth
+            }
+        }
+
+        const payload = JSON.stringify({
+            title,
+            body,
+            url,
+            icon: '/icon-192x192.png'
+        })
+
+        return webpush.sendNotification(pushSubscription, payload)
+            .catch(err => {
+                if (err.statusCode === 410) {
+                    supabase.from('push_subscriptions').delete().eq('id', sub.id).then()
+                } else {
+                    console.error('Error sending push:', err)
+                }
+            })
+    })
+
+    await Promise.all(notifications)
+    return { success: true, count: subscriptions.length }
+}
