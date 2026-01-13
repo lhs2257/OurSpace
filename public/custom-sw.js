@@ -1,18 +1,23 @@
 self.addEventListener('push', function (event) {
-    if (event.data) {
+    if (!event.data) return
+
+    try {
         const data = event.data.json()
+        const title = data.title || 'OurSpace 알림'
         const options = {
             body: data.body,
-            icon: data.icon || '/icon-192x192.png',
+            icon: '/icon-192x192.png', // iOS sometimes fails with absolute paths or missing icons
             badge: '/icon-192x192.png',
-            vibrate: [100, 50, 100],
             data: {
-                dateOfArrival: Date.now(),
-                primaryKey: '2',
                 url: data.url || '/'
-            },
+            }
         }
-        event.waitUntil(self.registration.showNotification(data.title, options))
+
+        event.waitUntil(
+            self.registration.showNotification(title, options)
+        )
+    } catch (err) {
+        console.error('Push notification error:', err)
     }
 })
 
