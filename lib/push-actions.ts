@@ -10,9 +10,20 @@ webpush.setVapidDetails(
 )
 
 export async function sendPushNotification(title: string, body: string, url: string = '/') {
-    const supabase = await createClient()
+    // Use Service Role client to bypass RLS and access ALL subscriptions
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        }
+    )
 
-    // 1. Get all subscriptions
+    // 1. Get all subscriptions (bypassing RLS with Service Role Key)
     const { data: subscriptions } = await supabase
         .from('push_subscriptions')
         .select('*')
