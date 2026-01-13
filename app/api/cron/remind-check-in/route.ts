@@ -35,9 +35,3 @@ export async function GET(request: Request) {
         return NextResponse.json({ message: 'Error sending notifications', error }, { status: 500 })
     }
 }
-
-return NextResponse.json({
-    message: 'Notifications sent',
-    count: subscriptions.length
-})
-}
