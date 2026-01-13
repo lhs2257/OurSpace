@@ -48,8 +48,15 @@ export async function sendPushNotification(title: string, body: string, url: str
             })
     })
 
-    await Promise.all(notifications)
-    return { success: true, count: subscriptions.length }
+    const results = await Promise.allSettled(notifications)
+
+    const outcomes = results.map((r, index) => ({
+        status: r.status,
+        endpoint: subscriptions[index].endpoint.slice(0, 30) + '...',
+        error: r.status === 'rejected' ? String(r.reason) : null
+    }))
+
+    return { success: true, count: subscriptions.length, outcomes }
 }
 
 export async function sendPushToUser(userId: string, title: string, body: string, url: string = '/') {
