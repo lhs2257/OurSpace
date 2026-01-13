@@ -21,55 +21,23 @@ export async function GET(request: Request) {
         return NextResponse.json({ message: 'Weekend, skipping notification.' })
     }
 
-    // 3. Configure Web Push
-    webpush.setVapidDetails(
-        process.env.NEXT_PUBLIC_VAPID_SUBJECT!,
-        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-        process.env.NEXT_PRIVATE_VAPID_PRIVATE_KEY!
-    )
-
-    const supabase = await createClient()
-
-    // 4. Get all subscriptions and send push
-    const { data: subscriptions } = await supabase
-        .from('push_subscriptions')
-        .select('*')
-
-    if (!subscriptions || subscriptions.length === 0) {
-        return NextResponse.json({ message: 'No subscriptions found.' })
+    // 3. Send Push Notification using the shared action
+    // This ensures we use exactly the same logic as the working "Test Notification"
+    try {
+        const { sendPushNotification } = await import('@/lib/push-actions')
+        await sendPushNotification(
+            '출근 30분 전 알림 ⏰',
+            '30분 남았다.. 빨랑 출근해라.. 아오..'
+        )
+        return NextResponse.json({ message: 'Notifications triggered via shared action' })
+    } catch (error) {
+        console.error('Cron Push Error:', error)
+        return NextResponse.json({ message: 'Error sending notifications', error }, { status: 500 })
     }
+}
 
-    const notifications = subscriptions.map(sub => {
-        const pushSubscription = {
-            endpoint: sub.endpoint,
-            keys: {
-                p256dh: sub.p256dh,
-                auth: sub.auth
-            }
-        }
-
-        const payload = JSON.stringify({
-            title: '출근 30분 전 알림 ⏰',
-            body: '30분 남았다.. 빨랑 출근해라.. 아오..',
-            url: '/dashboard',
-            icon: '/icon-192x192.png'
-        })
-
-        return webpush.sendNotification(pushSubscription, payload)
-            .catch(err => {
-                if (err.statusCode === 410) {
-                    console.log(`Subscription expired for ${sub.user_id}`)
-                    supabase.from('push_subscriptions').delete().eq('id', sub.id).then()
-                } else {
-                    console.error('Error sending cron push:', err)
-                }
-            })
-    })
-
-    await Promise.all(notifications)
-
-    return NextResponse.json({
-        message: 'Notifications sent',
-        count: subscriptions.length
-    })
+return NextResponse.json({
+    message: 'Notifications sent',
+    count: subscriptions.length
+})
 }
