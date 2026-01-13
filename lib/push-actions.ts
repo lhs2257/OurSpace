@@ -80,7 +80,7 @@ export async function sendPushToUser(userId: string, title: string, body: string
             icon: '/icon-192x192.png'
         })
 
-        return webpush.sendNotification(pushSubscription, payload)
+        return webpush.sendNotification(pushSubscription, payload, { headers: { 'Urgency': 'high' } })
             .catch(err => {
                 if (err.statusCode === 410) {
                     supabase.from('push_subscriptions').delete().eq('id', sub.id).then()
