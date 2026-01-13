@@ -55,14 +55,15 @@ export async function checkOut(userId: string) {
         return { success: false, error: error.message }
     }
 
-    // Push 알림 전송
+    // Push 알림 전송 - 본인을 제외한 다른 팀원들에게만 전송
     const { data: user } = await supabase.auth.getUser()
     const userName = user.user?.user_metadata?.full_name || user.user?.email?.split('@')[0] || '팀원'
 
-    import('./push-actions').then(({ sendPushNotification }) => {
-        sendPushNotification(
-            '퇴근 알림',
-            `${userName}님이 퇴근했습니다. 👋`,
+    import('./push-actions').then(({ sendPushNotificationExcept }) => {
+        sendPushNotificationExcept(
+            userId,
+            '팀원 퇴근 알림 🌙',
+            `${userName}님이 퇴근했습니다. 수고하셨습니다!`,
             '/'
         ).catch(e => console.error(e))
     })

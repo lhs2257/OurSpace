@@ -70,6 +70,69 @@ export async function sendPushNotification(title: string, body: string, url: str
     return { success: true, count: subscriptions.length, outcomes }
 }
 
+export async function sendPushNotificationExcept(excludeUserId: string, title: string, body: string, url: string = '/') {
+    // Use Service Role client to bypass RLS and access ALL subscriptions
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        }
+    )
+
+    // 1. Get all subscriptions EXCEPT for the excluded user
+    const { data: subscriptions } = await supabase
+        .from('push_subscriptions')
+        .select('*')
+        .neq('user_id', excludeUserId)
+
+    if (!subscriptions || subscriptions.length === 0) return { success: true, count: 0 }
+
+    // 2. Send push to each subscription
+    const notifications = subscriptions.map(sub => {
+        const pushSubscription = {
+            endpoint: sub.endpoint,
+            keys: {
+                p256dh: sub.p256dh,
+                auth: sub.auth
+            }
+        }
+
+        const payload = JSON.stringify({
+            title,
+            body,
+            url,
+            icon: '/icon-192x192.png'
+        })
+
+        return webpush.sendNotification(pushSubscription, payload, { headers: { 'Urgency': 'high' } })
+            .catch(err => {
+                if (err.statusCode === 410) {
+                    // Subscription expired, delete from DB
+                    console.log(`Subscription expired for ${sub.user_id}, deleting...`)
+                    supabase.from('push_subscriptions').delete().eq('id', sub.id).then()
+                } else {
+                    console.error('Error sending push:', err)
+                }
+            })
+    })
+
+    const results = await Promise.allSettled(notifications)
+
+    const outcomes = results.map((r, index) => ({
+        status: r.status,
+        endpoint: subscriptions[index].endpoint.slice(0, 30) + '...',
+        error: r.status === 'rejected' ? String(r.reason) : null
+    }))
+
+    return { success: true, count: subscriptions.length, outcomes }
+}
+
+
 export async function sendPushToUser(userId: string, title: string, body: string, url: string = '/') {
     const supabase = await createClient()
 
