@@ -84,8 +84,12 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
             isSameDay(new Date(schedule.start_time), props.day.date)
         )
 
+        // Apply today's style directly to the button
+        const isToday = props.modifiers?.today
+        const todayClassName = isToday ? "bg-gray-200 text-gray-900" : ""
+
         return (
-            <CalendarDayButton {...props}>
+            <CalendarDayButton {...props} className={todayClassName}>
                 <span className="font-bold" style={{ fontSize: '20px', lineHeight: '1' }}>{props.day.date.getDate()}</span>
                 {daySchedules.length > 0 && (
                     <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
@@ -168,9 +172,10 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                                 head_cell: "text-gray-500 rounded-md w-full font-bold text-xl flex justify-center items-center flex-1 pb-4",
                                 row: "flex w-full mt-2",
                                 cell: "text-center text-4xl p-0 relative focus-within:relative focus-within:z-20 h-24 md:h-32 w-full flex-1",
-                                day: "h-[calc(100%-0.5rem)] w-[calc(100%-0.5rem)] m-1 p-0 font-normal aria-selected:opacity-100 hover:bg-gray-100 rounded-md transition-colors flex flex-col items-center justify-start pt-4 relative",
-                                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                                day_today: "bg-gray-200 text-gray-900",
+                                day: "h-[calc(100%-0.5rem)] w-[calc(100%-0.5rem)] m-1 p-0 font-normal aria-selected:opacity-100 rounded-md transition-colors flex flex-col items-center justify-start pt-4 relative",
+                                day_selected: "",
+                                day_today: "",
+                                today: "", // Override default calendar.tsx today style
                             }}
                             modifiers={{
                                 today: new Date(),
@@ -179,7 +184,7 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                                 hasSchedule: schedules.map(s => new Date(s.start_time))
                             }}
                             modifiersClassNames={{
-                                today: 'bg-gray-200 text-gray-900',
+                                today: '',
                                 sunday: 'text-red-600',
                                 saturday: 'text-blue-600',
                                 hasSchedule: 'font-bold'
