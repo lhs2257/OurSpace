@@ -39,6 +39,18 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
         today.setHours(23, 59, 59, 999);
         const isFuture = day > today;
 
+        // 2026년 1월 8일 부터 적용
+        const startDate = new Date('2026-01-08');
+        startDate.setHours(0, 0, 0, 0);
+
+        // 날짜 비교를 위해 day의 시간을 0으로 설정한 복사본 생성
+        const currentDay = new Date(day);
+        currentDay.setHours(0, 0, 0, 0);
+
+        if (currentDay < startDate) {
+            return 'default';
+        }
+
         // 주말이거나 미래 날짜는 색상 표시 안함
         if (isWeekend || isFuture) {
             return 'default';
