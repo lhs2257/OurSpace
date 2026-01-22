@@ -32,6 +32,35 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
         return records.find(r => r.date === dateStr);
     };
 
+    // 출근 상태 판단 함수
+    const getAttendanceStatus = (day: Date, record?: AttendanceRecord) => {
+        const isWeekend = getDay(day) === 0 || getDay(day) === 6;
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        const isFuture = day > today;
+
+        // 주말이거나 미래 날짜는 색상 표시 안함
+        if (isWeekend || isFuture) {
+            return 'default';
+        }
+
+        // 출근 기록이 없으면 결근
+        if (!record || !record.checkIn) {
+            return 'absent';
+        }
+
+        // 지각 여부 확인 (10:10 초과)
+        const checkInTime = new Date(record.checkIn);
+        const checkInHour = checkInTime.getHours();
+        const checkInMinute = checkInTime.getMinutes();
+
+        if (checkInHour > 10 || (checkInHour === 10 && checkInMinute > 10)) {
+            return 'late';
+        }
+
+        return 'normal';
+    };
+
     const handlePrevMonth = () => {
         if (onMonthChange) {
             onMonthChange(addMonths(currentMonth, -1));
@@ -77,11 +106,22 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
                     ))}
                     {daysInMonth.map(day => {
                         const record = getRecordForDate(day);
+                        const status = getAttendanceStatus(day, record);
+
+                        // 상태별 CSS 클래스
+                        let statusClass = 'bg-gray-50 border-gray-200'; // default
+                        if (status === 'absent') {
+                            statusClass = 'bg-red-50 border-red-200';
+                        } else if (status === 'late') {
+                            statusClass = 'bg-orange-50 border-orange-200';
+                        } else if (status === 'normal') {
+                            statusClass = 'bg-green-50 border-green-200';
+                        }
+
                         return (
                             <div
                                 key={day.toISOString()}
-                                className={`p-2 border rounded-lg text-sm ${record ? 'bg-green-50 border-green-200' : 'bg-gray-50'
-                                    }`}
+                                className={`p-2 border rounded-lg text-sm ${statusClass}`}
                             >
                                 <div className="font-medium">{format(day, 'd')}</div>
                                 {record && (
