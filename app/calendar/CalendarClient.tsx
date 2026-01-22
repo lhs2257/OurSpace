@@ -142,10 +142,10 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                 </Button>
             </div>
 
-            {/* Calendar Grid */}
-            <div className="space-y-6">
-                {/* 1. Monthly Calendar (Full Width) */}
-                <Card className="w-full">
+            {/* Top Section: Calendar (2/3) + Selected Date Schedule (1/3) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* 1. Monthly Calendar (Left - 2/3) */}
+                <Card className="lg:col-span-2 w-full">
                     <CardHeader>
                         <CardTitle>월간 캘린더</CardTitle>
                         <CardDescription>날짜를 선택하여 상세 일정을 확인하세요</CardDescription>
@@ -197,139 +197,136 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                     </CardContent>
                 </Card>
 
-                {/* 2. Bottom Section (Split View) */}
-                <div className="grid gap-6 lg:grid-cols-2">
-                    {/* Left: Selected Day Schedule & Add */}
-                    <Card className="h-full flex flex-col">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Clock className="h-5 w-5" />
-                                {date ? format(date, 'M월 d일 (E)', { locale: ko }) : '일정'}
-                            </CardTitle>
-                            <CardDescription>
-                                {selectedDaySchedules.length > 0
-                                    ? `총 ${selectedDaySchedules.length}개의 일정이 있습니다`
-                                    : '예정된 일정이 없습니다'}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-1 overflow-y-auto max-h-[600px]">
-                            {loading ? (
-                                <div className="flex items-center justify-center h-40">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                                </div>
-                            ) : selectedDaySchedules.length > 0 ? (
-                                <div className="space-y-3">
-                                    {selectedDaySchedules.map((schedule) => (
-                                        <div
-                                            key={schedule.id}
-                                            onClick={() => handleEditSchedule(schedule)}
-                                            className={`w-full text-left p-3 rounded-lg border transition-all hover:shadow-md ${schedule.user_id === currentUser.id
-                                                ? 'cursor-pointer hover:bg-gray-50 border-gray-200'
-                                                : 'cursor-default bg-gray-50/50 border-gray-100'
-                                                }`}
-                                        >
-                                            <div className="flex items-start gap-3">
-                                                <div
-                                                    className="h-full min-h-[40px] w-1.5 rounded-full flex-shrink-0"
-                                                    style={{ backgroundColor: schedule.color }}
-                                                />
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex justify-between items-start">
-                                                        <p className="font-semibold text-gray-900 line-clamp-1">{schedule.title}</p>
-                                                        {schedule.profiles && (
-                                                            <span className="text-xs text-gray-400 flex-shrink-0 ml-2 bg-white px-1.5 py-0.5 rounded border border-gray-100">
-                                                                {schedule.profiles.full_name}
-                                                            </span>
-                                                        )}
-                                                    </div>
-
-                                                    {schedule.description && (
-                                                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">{schedule.description}</p>
+                {/* 2. Selected Day Schedule (Right - 1/3) */}
+                <Card className="h-full flex flex-col lg:col-span-1">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Clock className="h-5 w-5" />
+                            {date ? format(date, 'M월 d일 (E)', { locale: ko }) : '일정'}
+                        </CardTitle>
+                        <CardDescription>
+                            {selectedDaySchedules.length > 0
+                                ? `총 ${selectedDaySchedules.length}개의 일정이 있습니다`
+                                : '예정된 일정이 없습니다'}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 overflow-y-auto max-h-[600px]">
+                        {loading ? (
+                            <div className="flex items-center justify-center h-40">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                            </div>
+                        ) : selectedDaySchedules.length > 0 ? (
+                            <div className="space-y-3">
+                                {selectedDaySchedules.map((schedule) => (
+                                    <div
+                                        key={schedule.id}
+                                        onClick={() => handleEditSchedule(schedule)}
+                                        className={`w-full text-left p-3 rounded-lg border transition-all hover:shadow-md ${schedule.user_id === currentUser.id
+                                            ? 'cursor-pointer hover:bg-gray-50 border-gray-200'
+                                            : 'cursor-default bg-gray-50/50 border-gray-100'
+                                            }`}
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <div
+                                                className="h-full min-h-[40px] w-1.5 rounded-full flex-shrink-0"
+                                                style={{ backgroundColor: schedule.color }}
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-start">
+                                                    <p className="font-semibold text-gray-900 line-clamp-1">{schedule.title}</p>
+                                                    {schedule.profiles && (
+                                                        <span className="text-xs text-gray-400 flex-shrink-0 ml-2 bg-white px-1.5 py-0.5 rounded border border-gray-100">
+                                                            {schedule.profiles.full_name}
+                                                        </span>
                                                     )}
+                                                </div>
 
-                                                    <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
-                                                        <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-medium">
-                                                            {format(new Date(schedule.start_time), 'a h:mm', { locale: ko })}
-                                                        </span>
-                                                        <span>-</span>
-                                                        <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-medium">
-                                                            {format(new Date(schedule.end_time), 'a h:mm', { locale: ko })}
-                                                        </span>
-                                                    </div>
+                                                {schedule.description && (
+                                                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">{schedule.description}</p>
+                                                )}
+
+                                                <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                                                    <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-medium">
+                                                        {format(new Date(schedule.start_time), 'a h:mm', { locale: ko })}
+                                                    </span>
+                                                    <span>-</span>
+                                                    <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-medium">
+                                                        {format(new Date(schedule.end_time), 'a h:mm', { locale: ko })}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-12 flex flex-col items-center justify-center h-full">
-                                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                                        <CalendarIcon className="h-8 w-8 text-gray-400" />
                                     </div>
-                                    <p className="text-gray-900 font-medium">일정이 없습니다</p>
-                                    <p className="text-sm text-gray-500 mt-1 mb-4">새로운 일정을 추가해보세요</p>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleAddSchedule}
-                                    >
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        일정 추가하기
-                                    </Button>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-12 flex flex-col items-center justify-center h-full">
+                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                    <CalendarIcon className="h-8 w-8 text-gray-400" />
                                 </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Right: All Upcoming Schedules */}
-                    <Card className="h-full">
-                        <CardHeader>
-                            <CardTitle>전체 일정</CardTitle>
-                            <CardDescription>모든 예정된 일정을 확인하세요</CardDescription>
-                        </CardHeader>
-                        <CardContent className="overflow-y-auto max-h-[600px]">
-                            {schedules.length > 0 ? (
-                                <div className="space-y-2">
-                                    {schedules.slice(0, 10).map((schedule) => (
-                                        <button
-                                            key={schedule.id}
-                                            onClick={() => handleEditSchedule(schedule)}
-                                            className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors ${schedule.user_id === currentUser.id
-                                                ? 'hover:bg-gray-50 cursor-pointer'
-                                                : 'hover:bg-gray-50/50 cursor-default'
-                                                }`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div
-                                                    className="h-8 w-1 rounded-full"
-                                                    style={{ backgroundColor: schedule.color }}
-                                                />
-                                                <div className="text-left">
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="font-medium text-gray-900">{schedule.title}</p>
-                                                        {schedule.profiles && (
-                                                            <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                                                                {schedule.profiles.full_name}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-sm text-gray-500">
-                                                        {format(new Date(schedule.start_time), 'M월 d일 (E) HH:mm', { locale: ko })}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-8 text-gray-500">
-                                    <p>등록된 일정이 없습니다</p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
+                                <p className="text-gray-900 font-medium">일정이 없습니다</p>
+                                <p className="text-sm text-gray-500 mt-1 mb-4">새로운 일정을 추가해보세요</p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleAddSchedule}
+                                >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    일정 추가하기
+                                </Button>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
+
+            {/* Bottom Section: All Upcoming Schedules (Full Width) */}
+            <Card className="w-full">
+                <CardHeader>
+                    <CardTitle>전체 일정</CardTitle>
+                    <CardDescription>모든 예정된 일정을 확인하세요</CardDescription>
+                </CardHeader>
+                <CardContent className="overflow-y-auto max-h-[600px]">
+                    {schedules.length > 0 ? (
+                        <div className="space-y-2">
+                            {schedules.slice(0, 10).map((schedule) => (
+                                <button
+                                    key={schedule.id}
+                                    onClick={() => handleEditSchedule(schedule)}
+                                    className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors ${schedule.user_id === currentUser.id
+                                        ? 'hover:bg-gray-50 cursor-pointer'
+                                        : 'hover:bg-gray-50/50 cursor-default'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div
+                                            className="h-8 w-1 rounded-full"
+                                            style={{ backgroundColor: schedule.color }}
+                                        />
+                                        <div className="text-left">
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-medium text-gray-900">{schedule.title}</p>
+                                                {schedule.profiles && (
+                                                    <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                                                        {schedule.profiles.full_name}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-sm text-gray-500">
+                                                {format(new Date(schedule.start_time), 'M월 d일 (E) HH:mm', { locale: ko })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-gray-500">
+                            <p>등록된 일정이 없습니다</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Schedule Modal */}
             <ScheduleModal
