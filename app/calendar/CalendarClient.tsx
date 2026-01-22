@@ -8,7 +8,7 @@ import { Plus, Clock, Calendar as CalendarIcon } from 'lucide-react'
 import { format, isSameDay } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import ScheduleModal from '@/components/ScheduleModal'
-import { getAllSchedules, Schedule } from '@/lib/schedule-actions'
+import { getAllSchedules, Schedule, getAllProfiles } from '@/lib/schedule-actions'
 import { createClient } from '@/lib/supabase-client'
 import type { DayButton } from 'react-day-picker'
 import React from 'react'
@@ -24,12 +24,14 @@ interface CalendarClientProps {
 export default function CalendarClient({ currentUser }: CalendarClientProps) {
     const [date, setDate] = useState<Date | undefined>(new Date())
     const [schedules, setSchedules] = useState<Schedule[]>([])
+    const [profiles, setProfiles] = useState<any[]>([])
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         loadSchedules()
+        loadProfiles()
 
         // Realtime 구독 설정
         const supabase = createClient()
@@ -52,9 +54,29 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
         setLoading(true)
         const result = await getAllSchedules()
         if (result.success && result.data) {
+            // View Policy: All schedules are visible to everyone (Open to All)
             setSchedules(result.data as Schedule[])
         }
         setLoading(false)
+    }
+
+    async function loadProfiles() {
+        const result = await getAllProfiles()
+        if (result.success && result.data) {
+            setProfiles(result.data)
+        }
+    }
+
+    const getScheduleScope = (schedule: Schedule) => {
+        if (!schedule.shared_with || schedule.shared_with.includes('ALL')) {
+            return "모두"
+        }
+
+        // Filter profiles that are in the shared_with list
+        const assignedProfiles = profiles.filter(p => schedule.shared_with?.includes(p.id))
+        if (assignedProfiles.length === 0) return "비공개" // Should not happen if visible
+
+        return assignedProfiles.map(p => p.full_name).join(", ")
     }
 
     const selectedDaySchedules = schedules.filter(schedule =>
@@ -69,11 +91,14 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
     }
 
     const handleEditSchedule = (schedule: Schedule) => {
-        // 본인의 일정이 아니면 수정 불가 (상세 보기는 가능하게 할 수도 있음)
-        if (schedule.user_id !== currentUser.id) {
-            alert('작성자만 수정할 수 있습니다.')
-            return
-        }
+        const isOwner = schedule.user_id === currentUser.id
+        // Treat null (legacy) as 'ALL' to match UI default
+        const isSharedWithAll = schedule.shared_with?.includes('ALL') || !schedule.shared_with
+        const isSharedWithMe = schedule.shared_with?.includes(currentUser.id)
+
+        // Edit permission: Owner OR Listed in shared_with (ALL or Me)
+        const canEdit = isOwner || isSharedWithAll || isSharedWithMe
+
         setSelectedSchedule(schedule)
         setIsModalOpen(true)
     }
@@ -221,10 +246,7 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                                     <div
                                         key={schedule.id}
                                         onClick={() => handleEditSchedule(schedule)}
-                                        className={`w-full text-left p-3 rounded-lg border transition-all hover:shadow-md ${schedule.user_id === currentUser.id
-                                            ? 'cursor-pointer hover:bg-gray-50 border-gray-200'
-                                            : 'cursor-default bg-gray-50/50 border-gray-100'
-                                            }`}
+                                        className="w-full text-left p-3 rounded-lg border transition-all hover:shadow-md cursor-pointer hover:bg-gray-50 border-gray-200"
                                     >
                                         <div className="flex items-start gap-3">
                                             <div
@@ -234,11 +256,9 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-start">
                                                     <p className="font-semibold text-gray-900 line-clamp-1">{schedule.title}</p>
-                                                    {schedule.profiles && (
-                                                        <span className="text-xs text-gray-400 flex-shrink-0 ml-2 bg-white px-1.5 py-0.5 rounded border border-gray-100">
-                                                            {schedule.profiles.full_name}
-                                                        </span>
-                                                    )}
+                                                    <span className="text-xs text-gray-400 flex-shrink-0 ml-2 bg-white px-1.5 py-0.5 rounded border border-gray-200">
+                                                        {getScheduleScope(schedule)}
+                                                    </span>
                                                 </div>
 
                                                 {schedule.description && (
@@ -293,26 +313,21 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                                 <button
                                     key={schedule.id}
                                     onClick={() => handleEditSchedule(schedule)}
-                                    className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors ${schedule.user_id === currentUser.id
-                                        ? 'hover:bg-gray-50 cursor-pointer'
-                                        : 'hover:bg-gray-50/50 cursor-default'
-                                        }`}
+                                    className="w-full flex items-center justify-between p-3 rounded-lg border transition-all hover:shadow-md cursor-pointer hover:bg-gray-50 border-gray-200"
                                 >
                                     <div className="flex items-center gap-3">
                                         <div
                                             className="h-8 w-1 rounded-full"
                                             style={{ backgroundColor: schedule.color }}
                                         />
-                                        <div className="text-left">
-                                            <div className="flex items-center gap-2">
-                                                <p className="font-medium text-gray-900">{schedule.title}</p>
-                                                {schedule.profiles && (
-                                                    <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                                                        {schedule.profiles.full_name}
-                                                    </span>
-                                                )}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start">
+                                                <p className="font-medium text-gray-900 line-clamp-1">{schedule.title}</p>
+                                                <span className="text-xs text-gray-400 flex-shrink-0 ml-2 bg-white px-1.5 py-0.5 rounded border border-gray-200">
+                                                    {getScheduleScope(schedule)}
+                                                </span>
                                             </div>
-                                            <p className="text-sm text-gray-500">
+                                            <p className="text-sm text-gray-500 mt-0.5">
                                                 {format(new Date(schedule.start_time), 'M월 d일 (E) HH:mm', { locale: ko })}
                                             </p>
                                         </div>
@@ -337,6 +352,7 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                 userThemeColor={currentUser.themeColor}
                 schedule={selectedSchedule}
                 onSuccess={loadSchedules}
+                readOnly={false}
             />
         </div>
     )

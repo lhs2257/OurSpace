@@ -11,6 +11,7 @@ export interface Schedule {
     start_time: string
     end_time: string
     color: string
+    shared_with?: string[] // Array of user IDs or 'ALL'
     created_at: string
     profiles?: {
         id: string
@@ -20,6 +21,32 @@ export interface Schedule {
     }
 }
 
+export async function getAllProfiles() {
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        }
+    )
+
+    const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, theme_color')
+        .order('full_name')
+
+    if (error) {
+        console.error('Error fetching profiles:', error)
+        return { success: false, error: error.message }
+    }
+
+    return { success: true, data: profiles }
+}
+
 export async function createSchedule(data: {
     userId: string
     title: string
@@ -27,6 +54,7 @@ export async function createSchedule(data: {
     startTime: string
     endTime: string
     color?: string
+    sharedWith?: string[]
 }) {
     const supabase = await createClient()
 
@@ -39,6 +67,7 @@ export async function createSchedule(data: {
             start_time: data.startTime,
             end_time: data.endTime,
             color: data.color || '#3b82f6',
+            shared_with: data.sharedWith || null,
         })
         .select()
         .single()
@@ -58,8 +87,19 @@ export async function updateSchedule(id: number, data: {
     startTime?: string
     endTime?: string
     color?: string
+    sharedWith?: string[]
 }) {
-    const supabase = await createClient()
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        }
+    )
 
     const updateData: any = {}
     if (data.title !== undefined) updateData.title = data.title
@@ -67,6 +107,7 @@ export async function updateSchedule(id: number, data: {
     if (data.startTime !== undefined) updateData.start_time = data.startTime
     if (data.endTime !== undefined) updateData.end_time = data.endTime
     if (data.color !== undefined) updateData.color = data.color
+    if (data.sharedWith !== undefined) updateData.shared_with = data.sharedWith
 
     const { data: schedule, error } = await supabase
         .from('schedules')
@@ -85,7 +126,17 @@ export async function updateSchedule(id: number, data: {
 }
 
 export async function deleteSchedule(id: number) {
-    const supabase = await createClient()
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        }
+    )
 
     const { error } = await supabase
         .from('schedules')
@@ -127,7 +178,17 @@ export async function getSchedules(startDate: string, endDate: string) {
 }
 
 export async function getAllSchedules() {
-    const supabase = await createClient()
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        }
+    )
 
     const { data, error } = await supabase
         .from('schedules')
@@ -142,7 +203,7 @@ export async function getAllSchedules() {
         .order('start_time', { ascending: true })
 
     if (error) {
-        console.error('Get all schedules error:', error)
+        console.error('Error fetching all schedules:', error)
         return { success: false, error: error.message, data: [] }
     }
 
