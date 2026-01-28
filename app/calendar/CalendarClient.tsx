@@ -143,16 +143,15 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                             const endDate = new Date(schedule.end_time)
                             const isStart = isSameDay(startDate, date)
                             const isEnd = isSameDay(endDate, date)
-                            const isSunday = date.getDay() === 0
 
-                            // Show title if it's the start day or it's Sunday (start of row visually)
-                            const showTitle = isStart || isSunday
+                            // Show title only on start day, allow it to span across
+                            const showTitle = isStart
 
                             return (
                                 <div
                                     key={schedule.id || idx}
                                     className={`
-                                        h-5 text-xs truncate mb-0.5 cursor-pointer flex items-center
+                                        h-5 text-xs mb-0.5 cursor-pointer flex items-center
                                         ${isStart ? 'rounded-l-md ml-1 pl-1' : ''} 
                                         ${isEnd ? 'rounded-r-md mr-1' : ''}
                                         ${!isStart && !isEnd ? 'rounded-none w-full' : ''}
@@ -169,8 +168,8 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                                         handleEditSchedule(schedule)
                                     }}
                                 >
-                                    {showTitle && <span className="font-semibold text-gray-900 truncate block w-full">
-                                        {schedule.title.length > 8 ? schedule.title.slice(0, 8) + '...' : schedule.title}
+                                    {showTitle && <span className="font-semibold text-gray-900 whitespace-nowrap block">
+                                        {schedule.title}
                                     </span>}
                                 </div>
                             )
