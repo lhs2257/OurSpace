@@ -8,15 +8,17 @@ export interface Message {
     sender_id: string
     content: string
     attachment_url?: string
+    room_id?: string
     created_at: string
     profiles?: {
         id: string
         full_name: string
         avatar_url: string
+        theme_color?: string
     }
 }
 
-export async function sendMessage(senderId: string, content: string, attachmentUrl?: string) {
+export async function sendMessage(senderId: string, content: string, roomId?: string, attachmentUrl?: string) {
     const supabase = await createClient()
 
     const { data, error } = await supabase
@@ -24,6 +26,7 @@ export async function sendMessage(senderId: string, content: string, attachmentU
         .insert({
             sender_id: senderId,
             content: content,
+            room_id: roomId,
             attachment_url: attachmentUrl,
         })
         .select()
@@ -48,13 +51,42 @@ export async function getMessages() {
             profiles (
                 id,
                 full_name,
-                avatar_url
+                avatar_url,
+                theme_color
             )
         `)
         .order('created_at', { ascending: true })
 
     if (error) {
         console.error('Get messages error:', error)
+        return { success: false, error: error.message, data: [] }
+    }
+
+    return { success: true, data: data || [] }
+}
+
+/**
+ * Get messages for a specific room
+ */
+export async function getRoomMessages(roomId: string) {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+        .from('messages')
+        .select(`
+            *,
+            profiles (
+                id,
+                full_name,
+                avatar_url,
+                theme_color
+            )
+        `)
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: true })
+
+    if (error) {
+        console.error('Get room messages error:', error)
         return { success: false, error: error.message, data: [] }
     }
 

@@ -1,12 +1,18 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Send, Paperclip, Loader2 } from 'lucide-react'
+import { Send, Paperclip, Loader2, ArrowLeft, Plus } from 'lucide-react'
 import ChatMessage from '@/components/ChatMessage'
-import { getMessages, sendMessage, uploadFile, Message } from '@/lib/message-actions'
+import TeamMemberList from '@/components/TeamMemberList'
+import ChatRoomList from '@/components/ChatRoomList'
+import CreateRoomModal from '@/components/CreateRoomModal'
+import { getRoomMessages, sendMessage, uploadFile, Message } from '@/lib/message-actions'
+import { getChatRooms, createChatRoom, ChatRoom } from '@/lib/chat-room-actions'
+import { getTeamMembers, TeamMember } from '@/lib/team-actions'
 import { createClient } from '@/lib/supabase-client'
 
 interface ChatPageClientProps {
@@ -14,25 +20,97 @@ interface ChatPageClientProps {
 }
 
 export default function ChatPageClient({ userId }: ChatPageClientProps) {
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    const roomId = searchParams.get('room')
+
+    // State
     const [messages, setMessages] = useState<Message[]>([])
     const [newMessage, setNewMessage] = useState('')
     const [loading, setLoading] = useState(false)
     const [uploading, setUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+
+    const [rooms, setRooms] = useState<ChatRoom[]>([])
+    const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+    const [currentRoom, setCurrentRoom] = useState<ChatRoom | null>(null)
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
+    // Load lobby data (rooms and team members)
     useEffect(() => {
-        loadMessages()
+        loadLobbyData()
+    }, [])
 
-        // Realtime 구독 설정
+    // Load room messages when room changes
+    useEffect(() => {
+        if (roomId) {
+            loadRoomData(roomId)
+            setupRealtimeSubscription(roomId)
+        } else {
+            setCurrentRoom(null)
+            setMessages([])
+        }
+
+        return () => {
+            // Cleanup realtime subscription
+            const supabase = createClient()
+            supabase.removeAllChannels()
+        }
+    }, [roomId])
+
+    // Auto-scroll when new messages arrive
+    useEffect(() => {
+        scrollToBottom()
+    }, [messages])
+
+    async function loadLobbyData() {
+        const [roomsResult, membersResult] = await Promise.all([
+            getChatRooms(),
+            getTeamMembers()
+        ])
+
+        if (roomsResult.success && roomsResult.data) {
+            setRooms(roomsResult.data)
+        }
+
+        if (membersResult.success && membersResult.data) {
+            setTeamMembers(membersResult.data)
+        }
+    }
+
+    async function loadRoomData(roomId: string) {
+        const result = await getRoomMessages(roomId)
+        if (result.success && result.data) {
+            setMessages(result.data as Message[])
+        }
+
+        // Find current room info
+        const room = rooms.find(r => r.id === roomId)
+        if (room) {
+            setCurrentRoom(room)
+        } else {
+            // Reload rooms if not found (might be a new room)
+            const roomsResult = await getChatRooms()
+            if (roomsResult.success && roomsResult.data) {
+                setRooms(roomsResult.data)
+                const foundRoom = roomsResult.data.find(r => r.id === roomId)
+                setCurrentRoom(foundRoom || null)
+            }
+        }
+    }
+
+    function setupRealtimeSubscription(roomId: string) {
         const supabase = createClient()
+
         const channel = supabase
-            .channel('messages-changes')
+            .channel(`room-${roomId}-messages`)
             .on('postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'messages' },
+                { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${roomId}` },
                 async (payload) => {
-                    // 새 메시지를 프로필 정보와 함께 조회
+                    // Fetch the new message with profile data
                     const { data } = await supabase
                         .from('messages')
                         .select(`
@@ -40,34 +118,19 @@ export default function ChatPageClient({ userId }: ChatPageClientProps) {
                             profiles (
                                 id,
                                 full_name,
-                                avatar_url
+                                avatar_url,
+                                theme_color
                             )
                         `)
                         .eq('id', payload.new.id)
                         .single()
 
                     if (data) {
-                        setMessages((prevMessages) => [...prevMessages, data as Message])
+                        setMessages((prev) => [...prev, data as Message])
                     }
                 }
             )
             .subscribe()
-
-        return () => {
-            supabase.removeChannel(channel)
-        }
-    }, [])
-
-    useEffect(() => {
-        // 새 메시지가 있을 때 자동 스크롤
-        scrollToBottom()
-    }, [messages])
-
-    async function loadMessages() {
-        const result = await getMessages()
-        if (result.success && result.data) {
-            setMessages(result.data as Message[])
-        }
     }
 
     const scrollToBottom = () => {
@@ -76,14 +139,13 @@ export default function ChatPageClient({ userId }: ChatPageClientProps) {
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!newMessage.trim()) return
+        if (!newMessage.trim() || !roomId) return
 
         setLoading(true)
         setError(null)
-        const result = await sendMessage(userId, newMessage)
+        const result = await sendMessage(userId, newMessage, roomId)
         if (result.success) {
             setNewMessage('')
-            // 메시지 전송 후 스크롤 (실시간 구독이 메시지를 추가하면 자동 스크롤됨)
         } else {
             setError(result.error || '메시지 전송에 실패했습니다.')
         }
@@ -92,9 +154,8 @@ export default function ChatPageClient({ userId }: ChatPageClientProps) {
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
-        if (!file) return
+        if (!file || !roomId) return
 
-        // 파일 크기 제한 (5MB)
         if (file.size > 5 * 1024 * 1024) {
             alert('파일 크기는 5MB 이하여야 합니다.')
             return
@@ -104,41 +165,100 @@ export default function ChatPageClient({ userId }: ChatPageClientProps) {
         const uploadResult = await uploadFile(file, userId)
 
         if (uploadResult.success && uploadResult.data) {
-            // 파일 업로드 성공 시 메시지 전송
             const fileName = file.name
-            const messageResult = await sendMessage(
-                userId,
-                fileName,
-                uploadResult.data.url
-            )
+            const messageResult = await sendMessage(userId, fileName, roomId, uploadResult.data.url)
 
-            if (messageResult.success) {
-                // 파일 입력 초기화
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = ''
-                }
+            if (messageResult.success && fileInputRef.current) {
+                fileInputRef.current.value = ''
             }
         } else {
-            alert('파일 업로드에 실패했습니다. Supabase Storage 버킷을 확인해주세요.')
+            alert('파일 업로드에 실패했습니다.')
         }
         setUploading(false)
     }
 
+    const handleRoomClick = (roomId: string) => {
+        router.push(`/chat?room=${roomId}`)
+    }
+
+    const handleBackToLobby = () => {
+        router.push('/chat')
+    }
+
+    const handleCreateRoom = async (roomName: string, memberIds: string[]) => {
+        const result = await createChatRoom(roomName, memberIds)
+        if (result.success && result.data) {
+            // Reload rooms and navigate to new room
+            await loadLobbyData()
+            router.push(`/chat?room=${result.data.id}`)
+        } else {
+            alert(result.error || '채팅방 생성에 실패했습니다.')
+        }
+    }
+
+    // Render lobby view (team members + room list)
+    if (!roomId) {
+        return (
+            <div className="h-[calc(100vh-4rem)] flex flex-col">
+                {/* Header */}
+                <div className="mb-6">
+                    <h1 className="text-3xl font-bold text-gray-900">채팅</h1>
+                    <p className="mt-2 text-gray-600">팀원들과 실시간으로 소통하세요</p>
+                </div>
+
+                {/* Lobby Layout */}
+                <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden">
+                    {/* Left: Team Members (1/3) */}
+                    <Card className="lg:col-span-1 overflow-hidden flex flex-col">
+                        <TeamMemberList members={teamMembers} />
+                    </Card>
+
+                    {/* Right: Chat Rooms (2/3) */}
+                    <Card className="lg:col-span-2 overflow-hidden flex flex-col">
+                        <div className="p-4 border-b flex items-center justify-between">
+                            <div>
+                                <h2 className="font-semibold text-lg text-gray-900">채팅방 목록</h2>
+                                <p className="text-sm text-gray-500 mt-1">참여중인 채팅방</p>
+                            </div>
+                            <Button onClick={() => setIsCreateModalOpen(true)}>
+                                <Plus className="h-4 w-4 mr-2" />
+                                새 채팅방
+                            </Button>
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                            <ChatRoomList rooms={rooms} onRoomClick={handleRoomClick} />
+                        </div>
+                    </Card>
+                </div>
+
+                {/* Create Room Modal */}
+                <CreateRoomModal
+                    isOpen={isCreateModalOpen}
+                    onClose={() => setIsCreateModalOpen(false)}
+                    members={teamMembers}
+                    currentUserId={userId}
+                    onCreate={handleCreateRoom}
+                />
+            </div>
+        )
+    }
+
+    // Render room view (full chat interface)
     return (
         <div className="h-[calc(100vh-4rem)] flex flex-col">
-            {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-900">채팅</h1>
-                <p className="mt-2 text-gray-600">팀원들과 실시간으로 소통하세요</p>
+            {/* Header with Back Button */}
+            <div className="mb-6 flex items-center gap-4">
+                <Button variant="outline" size="icon" onClick={handleBackToLobby}>
+                    <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900">{currentRoom?.name || '채팅방'}</h1>
+                    <p className="mt-1 text-gray-600">실시간 메시징</p>
+                </div>
             </div>
 
             {/* Chat Container */}
-            <Card className="flex-1 flex flex-col">
-                <CardHeader className="border-b">
-                    <CardTitle>팀 채팅</CardTitle>
-                    <CardDescription>실시간 메시징 및 파일 공유</CardDescription>
-                </CardHeader>
-
+            <Card className="flex-1 flex flex-col overflow-hidden">
                 {/* Messages */}
                 <CardContent className="flex-1 overflow-y-auto p-6 space-y-4">
                     {messages.length > 0 ? (
