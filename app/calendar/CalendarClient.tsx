@@ -105,47 +105,107 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
 
     // Custom DayButton component to show schedule indicators
     const CustomDayButton = (props: React.ComponentProps<typeof DayButton>) => {
-        const daySchedules = schedules.filter(schedule =>
-            isSameDay(new Date(schedule.start_time), props.day.date)
-        )
+        const date = props.day.date
 
-        // Apply today's style directly to the button
+        // Find all schedules active on this day
+        const daySchedules = schedules.filter(schedule => {
+            const start = new Date(schedule.start_time)
+            const end = new Date(schedule.end_time)
+            // Reset hours to compare dates only (inclusive)
+            const dayStart = new Date(date)
+            dayStart.setHours(0, 0, 0, 0)
+            const dayEnd = new Date(date)
+            dayEnd.setHours(23, 59, 59, 999)
+
+            return new Date(start) <= dayEnd && new Date(end) >= dayStart
+        }).sort((a, b) => {
+            // Sort by start time, then by duration (longer first), then by id
+            const startDiff = new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+            if (startDiff !== 0) return startDiff
+            return new Date(b.end_time).getTime() - new Date(a.end_time).getTime()
+        })
+
+        // Apply today's style
         const isToday = props.modifiers?.today
-        const todayClassName = isToday ? "bg-gray-200 text-gray-900" : ""
+        const isSelected = props.modifiers?.selected
+        const todayClassName = isToday ? "bg-blue-50" : ""
+        const selectedClassName = isSelected ? "!bg-blue-100" : ""
 
         return (
-            <CalendarDayButton {...props} className={todayClassName}>
-                <span className="font-bold" style={{ fontSize: '20px', lineHeight: '1' }}>{props.day.date.getDate()}</span>
-                {daySchedules.length > 0 && (
-                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
-                        {daySchedules.slice(0, 3).map((schedule, idx) => (
-                            <div
-                                key={schedule.id || idx}
-                                className="w-1.5 h-1.5 rounded-full"
-                                style={{ backgroundColor: schedule.color }}
-                            />
-                        ))}
+            <CalendarDayButton {...props} className={`${todayClassName} ${selectedClassName} text-left align-top hover:bg-gray-50`}>
+                <div className="w-full h-full flex flex-col items-start pt-1">
+                    <span className={`text-sm font-bold block mb-1 pl-1 ${isToday ? 'text-blue-600' : ''}`}>
+                        {date.getDate()}
+                    </span>
+                    <div className="w-full flex flex-col gap-0.5 overflow-hidden">
+                        {daySchedules.slice(0, 4).map((schedule, idx) => {
+                            const startDate = new Date(schedule.start_time)
+                            const endDate = new Date(schedule.end_time)
+                            const isStart = isSameDay(startDate, date)
+                            const isEnd = isSameDay(endDate, date)
+                            const isSunday = date.getDay() === 0
+
+                            // Show title if it's the start day or it's Sunday (start of row visually)
+                            const showTitle = isStart || isSunday
+
+                            return (
+                                <div
+                                    key={schedule.id || idx}
+                                    className={`
+                                        h-5 text-xs truncate mb-0.5 cursor-pointer flex items-center
+                                        ${isStart ? 'rounded-l-md ml-1 pl-1' : ''} 
+                                        ${isEnd ? 'rounded-r-md mr-1' : ''}
+                                        ${!isStart && !isEnd ? 'rounded-none w-full' : ''}
+                                        ${!isStart ? 'pl-2' : ''} 
+                                    `}
+                                    style={{
+                                        backgroundColor: schedule.color + '40', // 25% opacity for background
+                                        borderLeft: isStart ? `3px solid ${schedule.color}` : undefined,
+                                        color: '#1f2937', // dark text for readability
+                                        width: (!isStart && !isEnd) ? '100%' : undefined
+                                    }}
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleEditSchedule(schedule)
+                                    }}
+                                >
+                                    {showTitle && <span className="font-semibold text-gray-900 truncate block w-full">
+                                        {schedule.title.length > 8 ? schedule.title.slice(0, 8) + '...' : schedule.title}
+                                    </span>}
+                                </div>
+                            )
+                        })}
+                        {daySchedules.length > 4 && (
+                            <span className="text-[10px] text-gray-400 pl-1">
+                                +{daySchedules.length - 4}개
+                            </span>
+                        )}
                     </div>
-                )}
+                </div>
             </CalendarDayButton>
         )
     }
 
-    // Custom Weekday component with custom font size
+    // Custom Weekday component with custom font size and English translation
     const CustomWeekday = ({ children, ...props }: any) => {
-        // 요일 텍스트 확인 (일, 월, 화, 수, 목, 금, 토)
-        const dayText = children?.toString() || ''
-
-        let color = '#6b7280' // 기본 gray-500
-        if (dayText.includes('일')) {
-            color = '#dc2626' // 일요일 - 빨간색
-        } else if (dayText.includes('토')) {
-            color = '#2563eb' // 토요일 - 파란색
+        // Map Korean day names to English
+        const dayMap: { [key: string]: string } = {
+            '일': 'SUN', '월': 'MON', '화': 'TUE', '수': 'WED',
+            '목': 'THU', '금': 'FRI', '토': 'SAT'
         }
+
+        const originalText = children?.toString() || ''
+        // Extract the Korean char (assuming single char or starts with it)
+        const koreanDay = originalText.charAt(0)
+        const englishDay = dayMap[koreanDay] || originalText
+
+        let colorClass = 'text-gray-500'
+        if (englishDay === 'SUN') colorClass = 'text-red-600'
+        else if (englishDay === 'SAT') colorClass = 'text-blue-600'
 
         return (
             <th {...props} className="rounded-md w-full font-bold flex justify-center items-center flex-1 pb-4">
-                <span style={{ fontSize: '20px', lineHeight: '1', color }}>{children}</span>
+                <span className={colorClass} style={{ fontSize: '20px', lineHeight: '1' }}>{englishDay}</span>
             </th>
         )
     }
@@ -192,12 +252,14 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                                 nav_button: "h-8 w-8 bg-transparent p-0 opacity-100 hover:opacity-75 text-foreground cursor-pointer block",
                                 nav_button_previous: "static block",
                                 nav_button_next: "static block",
-                                table: "w-full border-collapse space-y-1 block",
-                                head_row: "flex w-full mb-4 [&>*:first-child]:!text-red-600 [&>*:last-child]:!text-blue-600",
-                                head_cell: "text-gray-500 rounded-md w-full font-bold text-xl flex justify-center items-center flex-1 pb-4",
-                                row: "flex w-full mt-2",
-                                cell: "text-center text-4xl p-0 relative focus-within:relative focus-within:z-20 h-24 md:h-32 w-full flex-1",
-                                day: "h-[calc(100%-0.5rem)] w-[calc(100%-0.5rem)] m-1 p-0 font-normal aria-selected:opacity-100 rounded-md transition-colors flex flex-col items-center justify-start pt-4 relative",
+                                table: "!table w-full border-collapse table-fixed",
+                                tbody: "!table-row-group w-full",
+                                head: "!table-header-group w-full",
+                                head_row: "!table-row [&>*:first-child]:!text-red-600 [&>*:last-child]:!text-blue-600",
+                                head_cell: "!table-cell text-gray-500 font-bold text-xl pb-4 align-middle",
+                                row: "!table-row w-full mt-2",
+                                cell: "!table-cell p-0 align-top h-24 md:h-32 relative focus-within:z-20 min-w-0",
+                                day: "h-full w-full aspect-auto m-0 p-0 font-normal aria-selected:opacity-100 transition-colors flex flex-col items-start justify-start relative hover:bg-gray-50",
                                 day_selected: "",
                                 day_today: "",
                                 today: "", // Override default calendar.tsx today style
@@ -321,9 +383,9 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                                             style={{ backgroundColor: schedule.color }}
                                         />
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between items-start">
+                                            <div className="flex items-center gap-2">
                                                 <p className="font-medium text-gray-900 line-clamp-1">{schedule.title}</p>
-                                                <span className="text-xs text-gray-400 flex-shrink-0 ml-2 bg-white px-1.5 py-0.5 rounded border border-gray-200">
+                                                <span className="text-xs text-gray-400 flex-shrink-0 bg-white px-1.5 py-0.5 rounded border border-gray-200">
                                                     {getScheduleScope(schedule)}
                                                 </span>
                                             </div>
