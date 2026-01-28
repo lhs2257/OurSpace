@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { Home, Calendar, MessageSquare, Clock, BarChart3, Gamepad2, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -44,8 +45,9 @@ export default function Sidebar({ user }: SidebarProps) {
     return (
         <div className="flex h-screen w-64 flex-col bg-white border-r border-gray-200">
             {/* Logo */}
-            <div className="flex h-16 items-center px-6 border-b border-gray-200">
-                <h1 className="text-xl font-semibold text-gray-900">OurSpace</h1>
+            <div className="flex h-16 items-center gap-3 px-6 border-b border-gray-200">
+                <Image src="/ourspace-logo.png" alt="OurSpace Logo" width={40} height={40} className="rounded-lg" />
+                <h1 className="text-2xl font-semibold text-gray-900">OurSpace</h1>
             </div>
 
             {/* Navigation */}
