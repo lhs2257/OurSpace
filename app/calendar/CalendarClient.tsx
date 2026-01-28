@@ -313,7 +313,7 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                                 <button
                                     key={schedule.id}
                                     onClick={() => handleEditSchedule(schedule)}
-                                    className="w-full flex items-center justify-between p-3 rounded-lg border transition-all hover:shadow-md cursor-pointer hover:bg-gray-50 border-gray-200"
+                                    className="w-full text-left flex items-center justify-between p-3 rounded-lg border transition-all hover:shadow-md cursor-pointer hover:bg-gray-50 border-gray-200"
                                 >
                                     <div className="flex items-center gap-3">
                                         <div
@@ -329,6 +329,8 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                                             </div>
                                             <p className="text-sm text-gray-500 mt-0.5">
                                                 {format(new Date(schedule.start_time), 'M월 d일 (E) HH:mm', { locale: ko })}
+                                                {' ~ '}
+                                                {format(new Date(schedule.end_time), isSameDay(new Date(schedule.start_time), new Date(schedule.end_time)) ? 'HH:mm' : 'M월 d일 (E) HH:mm', { locale: ko })}
                                             </p>
                                         </div>
                                     </div>

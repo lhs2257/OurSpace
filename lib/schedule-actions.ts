@@ -22,17 +22,7 @@ export interface Schedule {
 }
 
 export async function getAllProfiles() {
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
-        }
-    )
+    const supabase = await createClient()
 
     const { data: profiles, error } = await supabase
         .from('profiles')
@@ -89,17 +79,7 @@ export async function updateSchedule(id: number, data: {
     color?: string
     sharedWith?: string[]
 }) {
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
-        }
-    )
+    const supabase = await createClient()
 
     const updateData: any = {}
     if (data.title !== undefined) updateData.title = data.title
@@ -126,17 +106,7 @@ export async function updateSchedule(id: number, data: {
 }
 
 export async function deleteSchedule(id: number) {
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
-        }
-    )
+    const supabase = await createClient()
 
     const { error } = await supabase
         .from('schedules')
@@ -178,17 +148,7 @@ export async function getSchedules(startDate: string, endDate: string) {
 }
 
 export async function getAllSchedules() {
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
-        }
-    )
+    const supabase = await createClient()
 
     const { data, error } = await supabase
         .from('schedules')
