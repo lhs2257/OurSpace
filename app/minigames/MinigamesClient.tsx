@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Dices } from 'lucide-react';
+import { Dices, Trophy } from 'lucide-react';
 
 export default function MinigamesClient() {
     const router = useRouter();
@@ -17,7 +17,14 @@ export default function MinigamesClient() {
             color: 'from-purple-500 to-pink-500',
             href: '/minigames/roulette',
         },
-        // 향후 추가될 게임들
+        {
+            id: 'pinball-race',
+            title: '핀볼 레이싱',
+            description: '물리 엔진 기반의 무작위 장애물 경주 게임입니다.',
+            icon: Trophy,
+            color: 'from-orange-500 to-red-500',
+            href: '/minigames/pinball-race',
+        },
     ];
 
     return (
