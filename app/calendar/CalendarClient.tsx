@@ -204,7 +204,7 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
 
         return (
             <th {...props} className="rounded-md w-full font-bold flex justify-center items-center flex-1 pb-4">
-                <span className={colorClass} style={{ fontSize: '20px', lineHeight: '1' }}>{englishDay}</span>
+                <span className={`${colorClass} text-xs md:text-sm`} style={{ lineHeight: '1' }}>{englishDay}</span>
             </th>
         )
     }
@@ -245,10 +245,10 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                                 root: "w-full max-w-full p-3 block relative",
                                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 w-full relative",
                                 month: "space-y-4 w-full relative flex flex-col",
-                                caption: "flex justify-center pt-1 relative items-center mb-4 z-10",
-                                caption_label: "text-lg font-bold",
-                                nav: "absolute top-0 left-0 flex items-center justify-between w-full px-4 pt-1 z-20",
-                                nav_button: "h-8 w-8 bg-transparent p-0 opacity-100 hover:opacity-75 text-foreground cursor-pointer block hover:bg-gray-100 rounded",
+                                caption: "flex justify-center items-center relative mb-4 z-10 min-h-[40px]",
+                                caption_label: "text-base md:text-lg font-bold whitespace-nowrap leading-none",
+                                nav: "absolute top-0 left-0 flex items-center justify-between w-full px-2 md:px-4 z-20 min-h-[40px]",
+                                nav_button: "h-8 w-8 bg-transparent p-0 opacity-100 hover:opacity-75 text-foreground cursor-pointer flex items-center justify-center hover:bg-gray-100 rounded",
                                 nav_button_previous: "static block",
                                 nav_button_next: "static block",
                                 table: "!table w-full border-collapse table-fixed",
