@@ -95,18 +95,21 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 4. 연차/반차 신청 함수
+-- 4. 연차/반차 신청 함수 (SECURITY DEFINER 추가)
 CREATE OR REPLACE FUNCTION apply_leave_record(
   p_user_id uuid,
   p_leave_date date,
   p_leave_type text
 )
-RETURNS json AS $$
+RETURNS json
+SECURITY DEFINER
+AS $$
 DECLARE
   v_month_year text;
   v_annual_remaining integer;
   v_half_remaining integer;
   v_leave_id uuid;
+  v_deleted_count integer;
 BEGIN
   -- 월년 계산
   v_month_year := TO_CHAR(p_leave_date, 'YYYY-MM');
@@ -143,20 +146,26 @@ BEGIN
     WHERE user_id = p_user_id AND month_year = v_month_year;
   END IF;
 
-  -- 해당 날짜의 지각 기록 삭제 (있을 경우)
+  -- [초강력 삭제] 해당 날짜(KST)에 해당하는 모든 지각 기록 삭제
   DELETE FROM late_records
-  WHERE user_id = p_user_id AND late_date = p_leave_date;
+  WHERE user_id = p_user_id 
+    AND check_in_time AT TIME ZONE 'Asia/Seoul' >= p_leave_date::timestamp
+    AND check_in_time AT TIME ZONE 'Asia/Seoul' < (p_leave_date + integer '1')::timestamp;
+    
+  GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
 
-  RETURN json_build_object('success', true, 'leave_id', v_leave_id);
+  RETURN json_build_object('success', true, 'leave_id', v_leave_id, 'deleted_late_records', v_deleted_count);
 END;
 $$ LANGUAGE plpgsql;
 
--- 5. 연차/반차 취소 함수
+-- 5. 연차/반차 취소 함수 (SECURITY DEFINER 추가)
 CREATE OR REPLACE FUNCTION cancel_leave_record(
   p_user_id uuid,
   p_leave_date date
 )
-RETURNS json AS $$
+RETURNS json
+SECURITY DEFINER
+AS $$
 DECLARE
   v_month_year text;
   v_leave_type text;
@@ -189,8 +198,7 @@ BEGIN
     WHERE user_id = p_user_id AND month_year = v_month_year;
   END IF;
 
-  -- [추가됨] 지각 기록 복구 로직 (이미 지각했는데 연차로 면제된 경우 다시 복구)
-  -- 해당 날짜의 출근 기록 조회
+  -- 지각 기록 복구 로직
   SELECT created_at INTO v_check_in_time
   FROM attendance
   WHERE user_id = p_user_id 
@@ -198,7 +206,6 @@ BEGIN
     AND type = 'check_in'
   LIMIT 1;
 
-  -- 출근 기록이 있고 원래 지각이었으면 다시 late_records에 추가
   IF v_check_in_time IS NOT NULL AND is_late_check_in(v_check_in_time) THEN
     INSERT INTO late_records (user_id, late_date, check_in_time, quarter)
     VALUES (p_user_id, p_leave_date, v_check_in_time, get_current_quarter())
