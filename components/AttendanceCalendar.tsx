@@ -197,10 +197,10 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
                                 className={`p-1 md:p-2 border rounded-lg text-xs md:text-sm cursor-pointer hover:shadow-md transition-shadow ${statusClass} min-h-[60px] md:min-h-[80px] flex flex-col justify-between`}
                             >
                                 {/* 날짜와 연차/반차 배지 */}
-                                <div className="flex flex-col md:flex-row md:items-center gap-1">
+                                <div className="flex flex-row items-center gap-1">
                                     <div className="font-medium">{format(day, 'd')}</div>
                                     {leave && (
-                                        <span className={`text-[10px] md:text-xs font-semibold px-1 py-0.5 rounded w-fit ${leave.leave_type === 'annual'
+                                        <span className={`text-[10px] md:text-xs font-semibold px-1 py-0.5 rounded w-fit whitespace-nowrap ${leave.leave_type === 'annual'
                                             ? 'bg-blue-200 text-blue-900'
                                             : 'bg-purple-200 text-purple-900'
                                             }`}>
@@ -214,12 +214,12 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
                                     <div className="text-[10px] md:text-xs mt-1 leading-tight">
                                         {record.checkIn && (
                                             <div>
-                                                <div className="whitespace-nowrap">
+                                                <div className="break-all md:whitespace-nowrap">
                                                     {format(new Date(record.checkIn), 'HH:mm')}
                                                     {record.checkOut && ` ~ ${format(new Date(record.checkOut), 'HH:mm')}`}
                                                 </div>
                                                 {record.duration && (
-                                                    <div className="text-gray-500 scale-90 origin-left hidden md:block">
+                                                    <div className="text-gray-500 scale-90 origin-left">
                                                         ({record.duration})
                                                     </div>
                                                 )}
