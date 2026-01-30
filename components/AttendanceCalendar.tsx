@@ -209,8 +209,8 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
                                     )}
                                 </div>
 
-                                {/* 출퇴근 기록 표시 - 연차는 표시 안함, 반차는 표시함 */}
-                                {record && (!leave || leave.leave_type === 'half') && (
+                                {/* 출퇴근 기록 표시 - 연차/반차 상관없이 기록 있으면 표시 */}
+                                {record && (
                                     <div className="text-xs mt-1">
                                         {record.checkIn && (
                                             <div>
