@@ -162,7 +162,7 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-7 gap-1 md:gap-2">
                     {['일', '월', '화', '수', '목', '금', '토'].map(day => (
                         <div key={day} className="text-center font-bold text-sm p-2">
                             {day}
@@ -194,13 +194,13 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
                             <div
                                 key={day.toISOString()}
                                 onClick={() => handleDayClick(day)}
-                                className={`p-2 border rounded-lg text-sm cursor-pointer hover:shadow-md transition-shadow ${statusClass}`}
+                                className={`p-1 md:p-2 border rounded-lg text-xs md:text-sm cursor-pointer hover:shadow-md transition-shadow ${statusClass} min-h-[60px] md:min-h-[80px] flex flex-col justify-between`}
                             >
-                                {/* 날짜와 연차/반차 배지를 같은 줄에 표시 */}
-                                <div className="flex items-center gap-1">
+                                {/* 날짜와 연차/반차 배지 */}
+                                <div className="flex flex-col md:flex-row md:items-center gap-1">
                                     <div className="font-medium">{format(day, 'd')}</div>
                                     {leave && (
-                                        <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${leave.leave_type === 'annual'
+                                        <span className={`text-[10px] md:text-xs font-semibold px-1 py-0.5 rounded w-fit ${leave.leave_type === 'annual'
                                             ? 'bg-blue-200 text-blue-900'
                                             : 'bg-purple-200 text-purple-900'
                                             }`}>
@@ -209,20 +209,19 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
                                     )}
                                 </div>
 
-                                {/* 출퇴근 기록 표시 - 연차/반차 상관없이 기록 있으면 표시 */}
+                                {/* 출퇴근 기록 표시 */}
                                 {record && (
-                                    <div className="text-xs mt-1">
+                                    <div className="text-[10px] md:text-xs mt-1 leading-tight">
                                         {record.checkIn && (
                                             <div>
-                                                {format(new Date(record.checkIn), 'HH:mm')}
-                                                {record.checkOut && (
-                                                    <>
-                                                        {' ~ '}
-                                                        {format(new Date(record.checkOut), 'HH:mm')}
-                                                    </>
-                                                )}
+                                                <div className="whitespace-nowrap">
+                                                    {format(new Date(record.checkIn), 'HH:mm')}
+                                                    {record.checkOut && ` ~ ${format(new Date(record.checkOut), 'HH:mm')}`}
+                                                </div>
                                                 {record.duration && (
-                                                    <div className="text-gray-600">({record.duration} 근무)</div>
+                                                    <div className="text-gray-500 scale-90 origin-left hidden md:block">
+                                                        ({record.duration})
+                                                    </div>
                                                 )}
                                             </div>
                                         )}

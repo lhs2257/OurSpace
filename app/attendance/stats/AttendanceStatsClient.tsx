@@ -102,7 +102,7 @@ export default function AttendanceStatsClient() {
         <div className="space-y-6">
             <h1 className="text-3xl font-bold">근태 통계</h1>
 
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-sm">출근 일수</CardTitle>
@@ -132,15 +132,15 @@ export default function AttendanceStatsClient() {
                         <CardTitle className="text-sm">이번달 연차/반차</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 md:gap-3">
                             <div className="flex items-center gap-1">
-                                <span className="text-3xl text-blue-600 font-bold">연차</span>
-                                <p className="text-3xl font-bold">{leaveBalance.annual_remaining}</p>
+                                <span className="text-2xl md:text-3xl text-blue-600 font-bold">연차</span>
+                                <p className="text-2xl md:text-3xl font-bold">{leaveBalance.annual_remaining}</p>
                             </div>
                             <div className="text-gray-300">|</div>
                             <div className="flex items-center gap-1">
-                                <span className="text-3xl text-purple-600 font-bold">반차</span>
-                                <p className="text-3xl font-bold">{leaveBalance.half_remaining}</p>
+                                <span className="text-2xl md:text-3xl text-purple-600 font-bold">반차</span>
+                                <p className="text-2xl md:text-3xl font-bold">{leaveBalance.half_remaining}</p>
                             </div>
                         </div>
                     </CardContent>

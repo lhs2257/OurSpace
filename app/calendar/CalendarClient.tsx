@@ -137,7 +137,7 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                     <span className={`text-sm font-bold block mb-1 pl-1 ${isToday ? 'text-blue-600' : ''}`}>
                         {date.getDate()}
                     </span>
-                    <div className="w-full flex flex-col gap-0.5 overflow-hidden">
+                    <div className="w-full flex flex-col gap-0.5 overflow-hidden max-w-full">
                         {daySchedules.slice(0, 4).map((schedule, idx) => {
                             const startDate = new Date(schedule.start_time)
                             const endDate = new Date(schedule.end_time)
@@ -151,7 +151,7 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                                 <div
                                     key={schedule.id || idx}
                                     className={`
-                                        h-5 text-xs mb-0.5 cursor-pointer flex items-center
+                                        h-1.5 md:h-5 text-xs mb-0.5 cursor-pointer flex items-center min-w-0 max-w-full
                                         ${isStart ? 'rounded-l-md ml-1 pl-1' : ''} 
                                         ${isEnd ? 'rounded-r-md mr-1' : ''}
                                         ${!isStart && !isEnd ? 'rounded-none w-full' : ''}
@@ -168,7 +168,7 @@ export default function CalendarClient({ currentUser }: CalendarClientProps) {
                                         handleEditSchedule(schedule)
                                     }}
                                 >
-                                    {showTitle && <span className="font-semibold text-gray-900 whitespace-nowrap block">
+                                    {showTitle && <span className="font-semibold text-gray-900 truncate block w-full hidden md:block">
                                         {schedule.title}
                                     </span>}
                                 </div>
