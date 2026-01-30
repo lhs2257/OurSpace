@@ -31,7 +31,7 @@ export default function PinballGame({ participants, ballsPerPerson, winMode, isR
 
     // Refs for Event Loop access (to avoid stale closures)
     const winModeRef = useRef(winMode);
-    const gameStatusRef = useRef(gameStatus);
+    const gameStatusRef = useRef<'ready' | 'countdown' | 'playing' | 'finished'>(gameStatus);
     const winnerRef = useRef(winner);
 
     useEffect(() => {
@@ -68,9 +68,10 @@ export default function PinballGame({ participants, ballsPerPerson, winMode, isR
         const world = engine.world;
         engineRef.current = engine;
 
-        // Dimensions - Make it long!
-        const width = containerRef.current.clientWidth;
-        const height = 2200; // Increased height to ensure ball stays visible at bottom
+        // Dimensions - Fixed Logical Width for Consistency
+        const LOGICAL_WIDTH = 600;
+        const width = LOGICAL_WIDTH;
+        const height = 2200;
 
         const render = Render.create({
             element: containerRef.current,
@@ -287,6 +288,37 @@ export default function PinballGame({ participants, ballsPerPerson, winMode, isR
                     mmCtx.strokeRect(0, scrollTop * scale, mmWidth, containerHeight * scale);
                 }
             }
+
+
+
+            // C. Dynamic Zoom Tracking (Mathematical Centering)
+            if (gameStatusRef.current === 'finished' && winnerRef.current && canvasRef.current && containerRef.current) {
+                const winnerBody = bodies.find(b => b.label === `ball-${winnerRef.current}`);
+                if (winnerBody) {
+                    // Turn off transition for realtime tracking
+                    canvasRef.current.style.transition = 'none';
+                    canvasRef.current.style.transformOrigin = '0 0';
+
+                    const scale = 4.0;
+                    const containerWidth = containerRef.current.clientWidth;
+                    const containerHeight = containerRef.current.clientHeight;
+                    const scrollTop = containerRef.current.scrollTop;
+                    const scaleFactor = containerWidth / LOGICAL_WIDTH;
+
+                    const bx = winnerBody.position.x;
+                    const by = winnerBody.position.y;
+
+                    // Convert to Visual Pos using scaleFactor
+                    const visualBx = bx * scaleFactor;
+                    const visualBy = by * scaleFactor;
+
+                    // Centering Logic
+                    const tx = (containerWidth / 2) - (visualBx * scale);
+                    const ty = (containerHeight / 2) - (visualBy * scale) + scrollTop;
+
+                    canvasRef.current.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+                }
+            }
         });
 
         // 4. Update Loop
@@ -346,31 +378,38 @@ export default function PinballGame({ participants, ballsPerPerson, winMode, isR
             // Camera Follow Logic (Scroll Container)
             if (containerRef.current) {
                 const containerHeight = containerRef.current.clientHeight;
+                const containerWidth = containerRef.current.clientWidth;
+                const scaleFactorRef = containerWidth / LOGICAL_WIDTH;
+                const currentScroll = containerRef.current.scrollTop;
                 let scrollDest = 0;
 
-                if (gameStatusRef.current === 'finished' && winnerRef.current) {
-                    const winnerBody = bodies.find(b => b.label === `ball-${winnerRef.current}`);
-                    if (winnerBody) {
-                        scrollDest = winnerBody.position.y - containerHeight / 2;
-                    } else {
-                        scrollDest = height - containerHeight;
-                    }
+
+
+                if (gameStatusRef.current === 'finished') {
+                    // STOP SCROLLING logic. Use current scroll to stabilize calculation.
+                    scrollDest = currentScroll;
                 } else if (activeBalls === 0) {
-                    if (gameStatusRef.current === 'finished') {
-                        scrollDest = height - containerHeight;
-                    }
-                    else scrollDest = containerRef.current.scrollTop;
+                    // Start or Reset state
+                    scrollDest = currentScroll;
                 } else {
-                    scrollDest = targetY - containerHeight / 2;
+                    // Follow Target (Visual Y)
+                    const visualTargetY = targetY * scaleFactorRef;
+                    scrollDest = visualTargetY - containerHeight / 2;
                 }
 
-                // Clamp scroll
-                scrollDest = Math.max(0, Math.min(scrollDest, height - containerHeight));
+                // Clamp scroll (Visual Height)
+                // Use logical height (2200) scaled to visual height
+                const visualTotalHeight = 2200 * scaleFactorRef;
+                scrollDest = Math.max(0, Math.min(scrollDest, visualTotalHeight - containerHeight));
 
-                const currentScroll = containerRef.current.scrollTop;
+                // Force scroll to top if ready (reset)
+                if (gameStatusRef.current === 'ready') {
+                    scrollDest = 0;
+                }
 
-                // More responsive follow (less lag)
-                const newScroll = currentScroll + (scrollDest - currentScroll) * 0.15;
+                // Normal smooth follow
+                let lerpFactor = gameStatusRef.current === 'ready' ? 0.2 : 0.15;
+                const newScroll = currentScroll + (scrollDest - currentScroll) * lerpFactor;
 
                 containerRef.current.scrollTop = newScroll;
             }
@@ -395,17 +434,29 @@ export default function PinballGame({ participants, ballsPerPerson, winMode, isR
         if (gameStatus !== 'playing') return;
 
         if (finishedList.length > 0) {
-            if (winMode === 'first') {
-                const w = finishedList[0];
+            const handleWin = (w: string) => {
                 setWinner(w);
                 setGameStatus('finished');
                 if (onFinish) onFinish(w);
+
+                // Effect: Slow Motion & Zoom In
+                // Effect: Slow Motion & Focal Zoom
+                if (engineRef.current) {
+                    engineRef.current.timing.timeScale = 0.3; // 30% Speed (Faster than before)
+                }
+                if (engineRef.current) {
+                    engineRef.current.timing.timeScale = 0.3;
+                }
+                // Removed CSS effect (handled in render loop)
+            };
+
+            if (winMode === 'first') {
+                const w = finishedList[0];
+                handleWin(w);
             } else if (winMode === 'last') {
                 if (finishedList.length === participants.length) {
                     const w = finishedList[finishedList.length - 1];
-                    setWinner(w);
-                    setGameStatus('finished');
-                    if (onFinish) onFinish(w);
+                    handleWin(w);
                 }
             }
         }
@@ -421,6 +472,15 @@ export default function PinballGame({ participants, ballsPerPerson, winMode, isR
             setGameStatus('countdown');
             setCountdown(3);
 
+            // Reset Effects (Speed & Zoom)
+            if (engineRef.current) {
+                engineRef.current.timing.timeScale = 1.0;
+            }
+            if (canvasRef.current) {
+                canvasRef.current.style.transition = 'transform 0.3s ease-in-out';
+                canvasRef.current.style.transform = 'scale(1)';
+            }
+
             // Reset Camera
             if (containerRef.current) {
                 containerRef.current.scrollTop = 0;
@@ -432,6 +492,15 @@ export default function PinballGame({ participants, ballsPerPerson, winMode, isR
             setFinishedList([]);
             setGameStatus('ready');
             setCountdown(0);
+
+            // Reset Effects (Speed & Zoom)
+            if (engineRef.current) {
+                engineRef.current.timing.timeScale = 1.0;
+            }
+            if (canvasRef.current) {
+                canvasRef.current.style.transition = 'transform 0.3s ease-in-out';
+                canvasRef.current.style.transform = 'scale(1)';
+            }
 
             // Clear Balls
             if (engineRef.current) {
@@ -463,7 +532,7 @@ export default function PinballGame({ participants, ballsPerPerson, winMode, isR
 
         const Bodies = Matter.Bodies;
         const Composite = Matter.Composite;
-        const width = containerRef.current.clientWidth;
+        const width = 600; // LOGICAL_WIDTH
 
         const newBalls: Matter.Body[] = [];
 
@@ -496,7 +565,7 @@ export default function PinballGame({ participants, ballsPerPerson, winMode, isR
                 className="w-full h-full absolute inset-0 overflow-hidden"
                 ref={containerRef}
             >
-                <canvas ref={canvasRef} />
+                <canvas ref={canvasRef} style={{ width: '100%', height: 'auto', display: 'block' }} />
             </div>
 
             {/* Canvas Minimap Overlay - Positioned Relative to Root (Fixed in visual sense) */}
@@ -511,7 +580,7 @@ export default function PinballGame({ participants, ballsPerPerson, winMode, isR
 
             {/* Overlay UI */}
             {countdown > 0 && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 pointer-events-none">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-50 pointer-events-none">
                     <div className="text-9xl font-bold text-white animate-pulse">
                         {countdown}
                     </div>

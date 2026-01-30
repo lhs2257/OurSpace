@@ -44,7 +44,7 @@ export default function PinballRaceClient() {
     const participants = participantsText.split('\n').filter(name => name.trim() !== '');
 
     return (
-        <div className="relative w-full h-[calc(100vh-5rem)] overflow-hidden bg-slate-950">
+        <div className="fixed top-0 right-0 bottom-0 left-0 md:left-64 overflow-hidden bg-slate-950 z-40">
             {/* Background Game - Always Visible */}
             <div className="absolute inset-0 z-0">
                 <PinballGame
