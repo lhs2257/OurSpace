@@ -88,9 +88,14 @@ export default function TeamStatusCard({ currentUserId }: { currentUserId: strin
         const channel = supabase
             .channel('attendance-changes')
             .on('postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'attendance' },
+                { event: '*', schema: 'public', table: 'attendance' },
                 () => {
-                    // 새 근태 기록이 추가되면 전체 팀 상태 다시 로드
+                    loadTeamStatus()
+                }
+            )
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'late_records' },
+                () => {
                     loadTeamStatus()
                 }
             )
@@ -116,7 +121,7 @@ export default function TeamStatusCard({ currentUserId }: { currentUserId: strin
         // 여기서는 클라이언트에서 Supabase 직접 호출
         const { data: lateRecords } = await supabase
             .from('late_records')
-            .select('user_id')
+            .select('user_id, late_date') // late_date 추가
             .eq('quarter', currentQuarter)
 
         if (result.success && result.data) {
@@ -150,8 +155,13 @@ export default function TeamStatusCard({ currentUserId }: { currentUserId: strin
                 // 지각 카운트 계산
                 const userLateCount = lateRecords?.filter(r => r.user_id === userId).length || 0
 
-                // 오늘 지각 여부
-                const isLateToday = firstCheckIn ? isLate(firstCheckIn.created_at) : false
+                // 오늘 지각 여부 (실제 지각 기록이 있는지 확인)
+                // firstCheckIn 시간상 지각이더라도, 연차/반차로 면제되었으면 lateRecords에 없음
+                const todayStr = new Date().toISOString().split('T')[0];
+                const isLateToday = lateRecords?.some(r =>
+                    r.user_id === userId &&
+                    r.late_date === todayStr
+                ) || false;
 
                 members.push({
                     userId,

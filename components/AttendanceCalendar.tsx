@@ -1,9 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { LeaveApplicationModal } from './LeaveApplicationModal';
+import { getMonthlyLeaveRecords, type LeaveRecord } from '@/lib/leave-actions';
 
 interface AttendanceRecord {
     date: string;
@@ -19,6 +22,9 @@ interface AttendanceCalendarProps {
 }
 
 export function AttendanceCalendar({ records, currentMonth, onMonthChange }: AttendanceCalendarProps) {
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [leaveRecords, setLeaveRecords] = useState<LeaveRecord[]>([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -32,8 +38,30 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
         return records.find(r => r.date === dateStr);
     };
 
+    const getLeaveForDate = (date: Date): LeaveRecord | undefined => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        return leaveRecords.find(r => r.leave_date === dateStr);
+    };
+
+    // 연차/반차 기록 조회
+    useEffect(() => {
+        const fetchLeaveRecords = async () => {
+            const monthYearStr = format(currentMonth, 'yyyy-MM');
+            const result = await getMonthlyLeaveRecords(monthYearStr);
+            if (result.success && result.data) {
+                setLeaveRecords(result.data);
+            }
+        };
+        fetchLeaveRecords();
+    }, [currentMonth]);
+
     // 출근 상태 판단 함수
-    const getAttendanceStatus = (day: Date, record?: AttendanceRecord) => {
+    const getAttendanceStatus = (day: Date, record?: AttendanceRecord, leave?: LeaveRecord) => {
+        // 연차/반차가 있으면 우선 처리
+        if (leave) {
+            return leave.leave_type === 'annual' ? 'leave-annual' : 'leave-half';
+        }
+
         const isWeekend = getDay(day) === 0 || getDay(day) === 6;
         const today = new Date();
         today.setHours(23, 59, 59, 999);
@@ -85,6 +113,33 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
         }
     };
 
+    const handleDayClick = (day: Date) => {
+        setSelectedDate(day);
+        setIsModalOpen(true);
+    };
+
+    const handleModalClose = () => {
+        setIsModalOpen(false);
+        setSelectedDate(null);
+    };
+
+    const handleLeaveSuccess = () => {
+        // 연차/반차 기록 새로고침
+        const fetchLeaveRecords = async () => {
+            const monthYearStr = format(currentMonth, 'yyyy-MM');
+            const result = await getMonthlyLeaveRecords(monthYearStr);
+            if (result.success && result.data) {
+                setLeaveRecords(result.data);
+            }
+        };
+        fetchLeaveRecords();
+
+        // 부모 컴포넌트에도 새로고침 알림 (출퇴근 기록 새로고침)
+        if (onMonthChange) {
+            onMonthChange(currentMonth);
+        }
+    };
+
     return (
         <Card>
             <CardHeader>
@@ -118,7 +173,8 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
                     ))}
                     {daysInMonth.map(day => {
                         const record = getRecordForDate(day);
-                        const status = getAttendanceStatus(day, record);
+                        const leave = getLeaveForDate(day);
+                        const status = getAttendanceStatus(day, record, leave);
 
                         // 상태별 CSS 클래스
                         let statusClass = 'bg-gray-50 border-gray-200'; // default
@@ -128,15 +184,33 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
                             statusClass = 'bg-orange-50 border-orange-200';
                         } else if (status === 'normal') {
                             statusClass = 'bg-green-50 border-green-200';
+                        } else if (status === 'leave-annual') {
+                            statusClass = 'bg-blue-50 border-blue-300 border-2';
+                        } else if (status === 'leave-half') {
+                            statusClass = 'bg-purple-50 border-purple-300 border-2';
                         }
 
                         return (
                             <div
                                 key={day.toISOString()}
-                                className={`p-2 border rounded-lg text-sm ${statusClass}`}
+                                onClick={() => handleDayClick(day)}
+                                className={`p-2 border rounded-lg text-sm cursor-pointer hover:shadow-md transition-shadow ${statusClass}`}
                             >
-                                <div className="font-medium">{format(day, 'd')}</div>
-                                {record && (
+                                {/* 날짜와 연차/반차 배지를 같은 줄에 표시 */}
+                                <div className="flex items-center gap-1">
+                                    <div className="font-medium">{format(day, 'd')}</div>
+                                    {leave && (
+                                        <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${leave.leave_type === 'annual'
+                                            ? 'bg-blue-200 text-blue-900'
+                                            : 'bg-purple-200 text-purple-900'
+                                            }`}>
+                                            {leave.leave_type === 'annual' ? '연차' : '반차'}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* 출퇴근 기록 표시 - 연차는 표시 안함, 반차는 표시함 */}
+                                {record && (!leave || leave.leave_type === 'half') && (
                                     <div className="text-xs mt-1">
                                         {record.checkIn && (
                                             <div>
@@ -159,6 +233,16 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
                     })}
                 </div>
             </CardContent>
+
+            {selectedDate && (
+                <LeaveApplicationModal
+                    isOpen={isModalOpen}
+                    onClose={handleModalClose}
+                    date={selectedDate}
+                    existingLeave={getLeaveForDate(selectedDate)}
+                    onSuccess={handleLeaveSuccess}
+                />
+            )}
         </Card>
     );
 }

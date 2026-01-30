@@ -6,6 +6,7 @@ import { AttendanceCalendar } from '@/components/AttendanceCalendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { getMonthlyLeaveBalance, type LeaveBalance } from '@/lib/leave-actions';
 
 interface AttendanceRecord {
     date: string;
@@ -18,6 +19,7 @@ export default function AttendanceStatsClient() {
     const [records, setRecords] = useState<AttendanceRecord[]>([]);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [stats, setStats] = useState({ totalDays: 0, totalHours: 0, avgHours: 0 });
+    const [leaveBalance, setLeaveBalance] = useState<LeaveBalance>({ annual_remaining: 0, half_remaining: 0 });
     const supabase = createClient();
 
     useEffect(() => {
@@ -87,13 +89,20 @@ export default function AttendanceStatsClient() {
         const avgHours = totalDays > 0 ? Math.floor(totalMinutes / totalDays / 60) : 0;
 
         setStats({ totalDays, totalHours, avgHours });
+
+        // 연차/반차 잔여 개수 조회
+        const monthYearStr = format(currentMonth, 'yyyy-MM');
+        const leaveResult = await getMonthlyLeaveBalance(monthYearStr);
+        if (leaveResult.success && leaveResult.data) {
+            setLeaveBalance(leaveResult.data);
+        }
     };
 
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold">근태 통계</h1>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-sm">출근 일수</CardTitle>
@@ -116,6 +125,24 @@ export default function AttendanceStatsClient() {
                     </CardHeader>
                     <CardContent>
                         <p className="text-3xl font-bold">{stats.avgHours}시간</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-sm">이번달 연차/반차</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1">
+                                <span className="text-3xl text-blue-600 font-bold">연차</span>
+                                <p className="text-3xl font-bold">{leaveBalance.annual_remaining}</p>
+                            </div>
+                            <div className="text-gray-300">|</div>
+                            <div className="flex items-center gap-1">
+                                <span className="text-3xl text-purple-600 font-bold">반차</span>
+                                <p className="text-3xl font-bold">{leaveBalance.half_remaining}</p>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
             </div>

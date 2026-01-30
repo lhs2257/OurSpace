@@ -76,6 +76,13 @@ export function TeamStatus() {
                     fetchTeamStatus();
                 }
             )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'late_records' },
+                () => {
+                    fetchTeamStatus();
+                }
+            )
             .subscribe();
 
         return () => {
@@ -126,7 +133,7 @@ export function TeamStatus() {
                     // 현재 분기 지각 횟수 조회
                     const { data: lateRecords, error: lateError } = await supabase
                         .from('late_records')
-                        .select('id')
+                        .select('id, late_date') // late_date 추가
                         .eq('user_id', profile.id)
                         .eq('quarter', currentQuarter);
 
@@ -135,7 +142,11 @@ export function TeamStatus() {
                     }
 
                     const lateCount = lateRecords?.length || 0;
-                    const isLateToday = checkIn ? isLate(checkIn.created_at) : false;
+
+                    // 오늘 지각 여부 (실제 지각 기록이 있는지 확인)
+                    const isLateToday = lateRecords?.some(r =>
+                        r.late_date === today
+                    ) || false;
 
                     return {
                         ...profile,
