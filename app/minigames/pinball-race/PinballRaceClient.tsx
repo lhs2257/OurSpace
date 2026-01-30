@@ -73,7 +73,7 @@ export default function PinballRaceClient() {
             </div>
 
             {/* Settings Overlay - Bottom Right */}
-            <Card className={`absolute bottom-6 right-6 z-20 w-[260px] max-w-[90vw] shadow-2xl border-slate-700 bg-slate-900/90 backdrop-blur text-slate-100 transition-all duration-300 ${isPlaying ? 'opacity-80 hover:opacity-100 w-auto min-w-[200px]' : ''}`}>
+            <Card className={`absolute bottom-24 right-4 md:bottom-6 md:right-6 z-20 w-[260px] max-w-[90vw] shadow-2xl border-slate-700 bg-slate-900/90 backdrop-blur text-slate-100 transition-all duration-300 ${isPlaying ? 'opacity-80 hover:opacity-100 w-auto min-w-[200px]' : ''}`}>
                 <CardContent className="p-3">
                     {/* Header for Settings */}
                     {!isPlaying && (
