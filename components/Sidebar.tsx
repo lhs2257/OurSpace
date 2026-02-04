@@ -25,6 +25,7 @@ interface SidebarProps {
 
 import { useState } from 'react'
 import ProfileModal, { THEME_COLORS } from './ProfileModal'
+import InstallPrompt from './InstallPrompt'
 
 export default function Sidebar({ user }: SidebarProps) {
     const pathname = usePathname()
@@ -71,6 +72,11 @@ export default function Sidebar({ user }: SidebarProps) {
                     )
                 })}
             </nav>
+
+            {/* Install App Button */}
+            <div className="px-3 mb-2">
+                <InstallPrompt />
+            </div>
 
             {/* User section */}
             <div className="border-t border-gray-200 p-4">
