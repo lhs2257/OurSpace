@@ -54,7 +54,7 @@ function isLate(checkInTime: string): boolean {
     const minutes = time.getMinutes();
 
     if (hours > 10) return true;
-    if (hours === 10 && minutes > 10) return true;
+    if (hours === 10 && minutes >= 16) return true; // 10:16분부터 지각
 
     return false;
 }
@@ -133,7 +133,7 @@ export function TeamStatus() {
                     // 현재 분기 지각 횟수 조회
                     const { data: lateRecords, error: lateError } = await supabase
                         .from('late_records')
-                        .select('id, late_date') // late_date 추가
+                        .select('id, late_date, check_in_time') // check_in_time 추가
                         .eq('user_id', profile.id)
                         .eq('quarter', currentQuarter);
 
@@ -141,7 +141,25 @@ export function TeamStatus() {
                         console.error('Error fetching late records:', lateError);
                     }
 
-                    const lateCount = lateRecords?.length || 0;
+                    // 지각 카운트 계산 (클라이언트 필터링: 1/8 이후 10:16 기준 적용)
+                    const validLateRecords = lateRecords?.filter(r => {
+                        if (r.check_in_time) {
+                            const recordDate = new Date(r.late_date);
+                            const policyDate = new Date('2026-01-08');
+
+                            // 1월 8일 이후 기록은 10:16 기준(isLate 함수)으로 재검증
+                            if (recordDate >= policyDate) {
+                                // isLate 함수는 이미 10:16 기준으로 업데이트됨
+                                // 하지만 DB의 check_in_time은 UTC일 수 있으니 주의.
+                                // isLate 함수 내부에서 new Date(checkInTime)하므로 브라우저 로컬 타임으로 변환됨.
+                                // 사용자가 한국이라면 정상 동작.
+                                return isLate(r.check_in_time);
+                            }
+                        }
+                        return true;
+                    }) || [];
+
+                    const lateCount = validLateRecords.length;
 
                     // 오늘 지각 여부 (실제 지각 기록이 있는지 확인)
                     const isLateToday = lateRecords?.some(r =>

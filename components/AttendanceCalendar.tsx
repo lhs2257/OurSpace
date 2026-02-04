@@ -89,12 +89,13 @@ export function AttendanceCalendar({ records, currentMonth, onMonthChange }: Att
             return 'absent';
         }
 
-        // 지각 여부 확인 (10:10 초과)
+        // 지각 여부 확인 (10:16 기준, 10:15:59까지 정상)
         const checkInTime = new Date(record.checkIn);
         const checkInHour = checkInTime.getHours();
         const checkInMinute = checkInTime.getMinutes();
 
-        if (checkInHour > 10 || (checkInHour === 10 && checkInMinute > 10)) {
+        // 10시 16분부터 지각
+        if (checkInHour > 10 || (checkInHour === 10 && checkInMinute >= 16)) {
             return 'late';
         }
 

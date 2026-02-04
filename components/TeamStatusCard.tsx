@@ -72,7 +72,7 @@ function isLate(checkInTime: string): boolean {
     const minutes = time.getMinutes();
 
     if (hours > 10) return true; // 11시 이후
-    if (hours === 10 && minutes > 10) return true; // 10:11 이후
+    if (hours === 10 && minutes >= 16) return true; // 10:16분부터 지각
 
     return false;
 }
@@ -121,7 +121,7 @@ export default function TeamStatusCard({ currentUserId }: { currentUserId: strin
         // 여기서는 클라이언트에서 Supabase 직접 호출
         const { data: lateRecords } = await supabase
             .from('late_records')
-            .select('user_id, late_date') // late_date 추가
+            .select('user_id, late_date, check_in_time') // check_in_time 추가
             .eq('quarter', currentQuarter)
 
         if (result.success && result.data) {
@@ -152,8 +152,35 @@ export default function TeamStatusCard({ currentUserId }: { currentUserId: strin
                 const lastCheckOut = userRecords.reverse().find(r => r.type === 'check_out') // 가장 최근 퇴근 기록
                 const profile = lastRecord.profiles
 
-                // 지각 카운트 계산
-                const userLateCount = lateRecords?.filter(r => r.user_id === userId).length || 0
+                // 지각 카운트 계산 (클라이언트 필터링 적용: 10:16 기준)
+                // DB에 잘못된 기록이 남아있어도 UI에서는 정상으로 보이게 처리
+                const validLateRecords = lateRecords?.filter(r => {
+                    if (r.user_id !== userId) return false;
+
+                    // 1월 8일 이전 기록은 기존대로 인정? 
+                    // 하지만 사용자 요청은 "1월 8일부터 적용"이므로 그 이후 기록만 필터링하면 되지만
+                    // 안전하게 모든 기록에 대해 현재 정책(10:16)을 적용하여 보여준다거나
+                    // 날짜별 분기 처리를 할 수 있음. 
+                    // 여기서는 isLate 함수(10:16 기준)를 사용하여 필터링.
+
+                    if (r.check_in_time) {
+                        // 1월 8일 이전 데이터 처리 로직이 필요하다면 추가. 
+                        // 현재 요구: "1월 8일 부터 지각 시간을 10시 16분 이후 부터로 처리"
+                        // data >= '2026-01-08' 인 경우만 isLate 체크?
+                        // 하지만 단순하게 모든 기록을 재검증하는 것이 깔끔할 수 있음 (사용자 의도에 맞게)
+                        // 다만 1월 초(1/1~1/7)는 10:10 기준이어야 한다면 날짜 체크 필요.
+
+                        const recordDate = new Date(r.late_date);
+                        const policyDate = new Date('2026-01-08');
+
+                        if (recordDate >= policyDate) {
+                            return isLate(r.check_in_time);
+                        }
+                    }
+                    return true; // 1/8 이전이거나 check_in_time 없으면 DB 기록 신뢰
+                }) || [];
+
+                const userLateCount = validLateRecords.length;
 
                 // 오늘 지각 여부 (실제 지각 기록이 있는지 확인)
                 // firstCheckIn 시간상 지각이더라도, 연차/반차로 면제되었으면 lateRecords에 없음
