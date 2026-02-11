@@ -143,6 +143,13 @@ export function TeamStatus() {
 
                     // 지각 카운트 계산 (클라이언트 필터링: 1/8 이후 10:16 기준 적용)
                     const validLateRecords = lateRecords?.filter(r => {
+                        // 1. 주말 체크 (late_date 기준 - 가장 확실한 방법)
+                        // 'YYYY-MM-DD' 형식이므로 new Date() 사용 시 브라우저 로컬 타임존 영향 줄이기 위해 요일 계산
+                        const datePart = new Date(r.late_date);
+                        const dayOfWeek = datePart.getDay();
+                        // 0: 일요일, 6: 토요일
+                        if (dayOfWeek === 0 || dayOfWeek === 6) return false;
+
                         if (r.check_in_time) {
                             const recordDate = new Date(r.late_date);
                             const policyDate = new Date('2026-01-08');
@@ -150,9 +157,6 @@ export function TeamStatus() {
                             // 1월 8일 이후 기록은 10:16 기준(isLate 함수)으로 재검증
                             if (recordDate >= policyDate) {
                                 // isLate 함수는 이미 10:16 기준으로 업데이트됨
-                                // 하지만 DB의 check_in_time은 UTC일 수 있으니 주의.
-                                // isLate 함수 내부에서 new Date(checkInTime)하므로 브라우저 로컬 타임으로 변환됨.
-                                // 사용자가 한국이라면 정상 동작.
                                 return isLate(r.check_in_time);
                             }
                         }
