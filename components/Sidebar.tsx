@@ -3,13 +3,14 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Calendar, MessageSquare, Clock, BarChart3, Gamepad2, LogOut } from 'lucide-react'
+import { Home, Calendar, MessageSquare, Clock, BarChart3, Gamepad2, LogOut, PenTool } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase-client'
 
 const navigation = [
     { name: '대시보드', href: '/dashboard', icon: Home },
     { name: '캘린더', href: '/calendar', icon: Calendar },
+    { name: '일지작성', href: '/daily-log', icon: PenTool },
     { name: '채팅', href: '/chat', icon: MessageSquare },
     { name: '근태 통계', href: '/attendance/stats', icon: BarChart3 },
     { name: '미니게임', href: '/minigames', icon: Gamepad2 },
